@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ── Design Tokens ─────────────────────────────────────── */
+@theme {
+  --color-saffron:        #C1521F;
+  --color-saffron-light:  #D96535;
+  --color-saffron-dark:   #8B3A14;
+  --color-gold:           #B58A45;
+  --color-gold-light:     #D4A955;
+  --color-gold-pale:      #E8D5A3;
+  --color-charcoal:       #0F0A04;
+  --color-charcoal-mid:   #1E1208;
+  --color-charcoal-light: #2E1E0F;
+  --color-ivory:          #F3E8D0;
+  --color-ivory-dark:     #E8D9BE;
+  --color-parchment:      #F9F2E3;
+  --color-stone:          #5C4A35;
+  --color-stone-light:    #7A6550;
+  --color-stone-pale:     #C4B8A8;
+  --color-forest:         #2C4A32;
+  --color-forest-light:   #3D6145;
+
+  --font-serif: 'Noto Serif Devanagari', Georgia, serif;
+  --font-sans:  'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-cinzel: 'Cinzel', 'Times New Roman', serif;
+}
+
+@keyframes shimmerGold {
+  0%   { background-position: -400% 0; }
+  100% { background-position:  400% 0; }
+}
+@keyframes kenBurns {
+  0%   { transform: scale(1)    translateX(0%)  translateY(0%); }
+  100% { transform: scale(1.06) translateX(-1.5%) translateY(-1%); }
+}
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+@utility btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    #8B3A14 0%,
+    #C1521F 20%,
+    #B58A45 40%,
+    #D4A955 50%,
+    #B58A45 60%,
+    #C1521F 80%,
+    #8B3A14 100%
+  );
+  background-size: 300% 100%;
+  animation: shimmerGold 3s linear infinite;
+}
+
+@utility ken-burns {
+  animation: kenBurns 14s ease-in-out infinite alternate;
+}
+
+@utility float-up {
+  animation: floatUp 3s ease-in-out infinite;
+}
+
+@utility font-cinzel {
+  font-family: 'Cinzel', 'Times New Roman', serif;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: 'Noto Sans Devanagari', system-ui, sans-serif;
+    background: #F9F2E3;
+    color: #1A1008;
+    line-height: 1.7;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Noto Serif Devanagari', Georgia, serif;
+    line-height: 1.25;
+    font-weight: 700;
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  img {
+    max-width: 100%;
+    display: block;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+  }
+}
+
+::-webkit-scrollbar        { width: 6px; }
+::-webkit-scrollbar-track  { background: #0F0A04; }
+::-webkit-scrollbar-thumb  { background: #B58A45; border-radius: 3px; }
+
+::selection {
+  background: rgba(193, 82, 31, 0.25);
+  color: #0F0A04;
+}
