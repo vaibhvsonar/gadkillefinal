@@ -214,3 +214,55 @@ CREATE TABLE IF NOT EXISTS public.certificates (
     issued_date         DATE         NOT NULL DEFAULT CURRENT_DATE,
     created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- ----------------------------------------------------------------------------
+-- 11. Dinvishesh Table (ऐतिहासिक दिनविशेष)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.dinvishesh (
+    id                      VARCHAR(100) PRIMARY KEY,
+    event_date              DATE NOT NULL,
+    day                     INT NOT NULL,
+    month                   INT NOT NULL,
+    year                    INT,
+    figure                  VARCHAR(150) NOT NULL DEFAULT 'छत्रपती शिवाजी महाराज',
+    personality             VARCHAR(150) NOT NULL DEFAULT 'छत्रपती शिवाजी महाराज',
+    event_type              VARCHAR(100) DEFAULT 'ऐतिहासिक प्रसंग',
+    title                   VARCHAR(255) NOT NULL,
+    title_marathi           VARCHAR(255) DEFAULT '',
+    title_en                VARCHAR(255) DEFAULT '',
+    title_english           VARCHAR(255) DEFAULT '',
+    description             TEXT NOT NULL,
+    description_marathi     TEXT DEFAULT '',
+    description_en          TEXT DEFAULT '',
+    description_english     TEXT DEFAULT '',
+    location                VARCHAR(200) DEFAULT '',
+    image                   VARCHAR(500) DEFAULT '/images/raigad.jpg',
+    image_url               VARCHAR(500) DEFAULT '/images/raigad.jpg',
+    historical_significance TEXT DEFAULT '',
+    source_name             VARCHAR(255) DEFAULT 'गडकिल्ले संवर्धन प्रतिष्ठान',
+    source_url              VARCHAR(500) DEFAULT '',
+    source_type             VARCHAR(100) DEFAULT 'Published historical book',
+    source_description      TEXT DEFAULT '',
+    verification_status     VARCHAR(50) DEFAULT 'verified',
+    is_disputed             INT DEFAULT 0,
+    dispute_note            TEXT DEFAULT '',
+    key_figures             TEXT DEFAULT '[]',
+    sources                 TEXT DEFAULT 'शिवसाम्राज्याचे दिनविशेष - गडकिल्ले संवर्धन प्रतिष्ठान, महाराष्ट्र राज्य',
+    is_published            INT NOT NULL DEFAULT 1,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ----------------------------------------------------------------------------
+-- 12. Event Sources Table (दिनविशेष संदर्भ)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.event_sources (
+    id                  VARCHAR(100) PRIMARY KEY,
+    dinvishesh_id       VARCHAR(100) NOT NULL REFERENCES public.dinvishesh(id) ON DELETE CASCADE,
+    source_name         VARCHAR(255) NOT NULL,
+    source_url          VARCHAR(500) DEFAULT '',
+    source_type         VARCHAR(100) DEFAULT 'Published historical book',
+    source_description  TEXT DEFAULT '',
+    is_primary          INT DEFAULT 0,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

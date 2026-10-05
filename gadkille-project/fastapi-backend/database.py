@@ -1063,12 +1063,12 @@ async def init_db() -> None:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             verified_events
         )
-    # Auto-seed May Dinvishesh events if needed
+    # Auto-seed all Dinvishesh events if needed
     try:
-        from import_may_dinvishesh import run_import as import_may_events
-        import_may_events()
+        from import_all_dinvishesh import run_all_imports
+        run_all_imports()
     except Exception as e:
-        print(f"[WARN] May dinvishesh seed note: {e}")
+        print(f"[WARN] Dinvishesh seed note: {e}")
 
     _local_conn.commit()
 
