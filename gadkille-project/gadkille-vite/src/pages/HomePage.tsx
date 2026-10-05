@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -12,12 +12,40 @@ import {
   ShieldCheck,
   Landmark,
   Leaf,
+  Sparkles,
+  Award,
 } from 'lucide-react';
 import { useSiteData } from '@/context/SiteContext';
 import { EmptyDatabaseState } from '@/components/ui';
+import { api, type DinvisheshRecord } from '@/lib/api';
+import { Dinvishesh3DCard } from '@/components/Dinvishesh3DCard';
 
 export function HomePage() {
   const { settings, forts, projects, events, loading, t } = useSiteData();
+  const [todayDinvishesh, setTodayDinvishesh] = useState<DinvisheshRecord | null>(null);
+
+  useEffect(() => {
+    const fetchTodayEvent = async () => {
+      try {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentDay = now.getDate();
+        const exactMatches = await api.getDinvishesh({ month: currentMonth, day: currentDay, is_published: true });
+        if (exactMatches && exactMatches.length > 0) {
+          setTodayDinvishesh(exactMatches[0]);
+        } else {
+          // Fallback to featured or first published event
+          const allEvts = await api.getDinvishesh({ is_published: true });
+          if (allEvts && allEvts.length > 0) {
+            setTodayDinvishesh(allEvts[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching today dinvishesh:', err);
+      }
+    };
+    fetchTodayEvent();
+  }, []);
 
   const spotlight = forts.find(f => f.isSpotlight) || forts[0];
   const featuredForts = forts.filter(f => f.isFeatured).slice(0, 3);
@@ -179,6 +207,48 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 2.5. TODAY'S DINVISHESH (आजचा दिनविशेष) */}
+      {todayDinvishesh && (
+        <section className="bg-gradient-to-b from-[#140C06] via-[#1E1208] to-[#140C06] text-[#F3E8D0] py-16 sm:py-20 border-b border-[#B58A45]/30 relative overflow-hidden">
+          <div className="absolute top-0 right-1/4 w-80 h-80 bg-[#A84A20]/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-[#D4A955]/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="max-w-[1200px] mx-auto px-6 relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-[#D4A955]/40 text-[#D4A955] text-xs font-serif uppercase tracking-widest mb-3 backdrop-blur shadow-sm">
+                  <Sparkles size={14} className="animate-spin text-[#D4A955]" />
+                  <span>{t('📜 आजचा दिनविशेष', "Today's Historical Event")}</span>
+                </div>
+                <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white">
+                  {t('इतिहासातील आजचा दिवस', 'Today in Maratha History')}
+                </h2>
+                <p className="text-white/70 text-xs sm:text-sm mt-1">
+                  {new Date().toLocaleDateString('mr-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+
+              <Link
+                to="/dinvishesh"
+                className="shrink-0 inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-[#A84A20] hover:bg-[#c15a2a] text-white font-bold text-xs sm:text-sm shadow-xl shadow-[rgba(168,74,32,0.3)] hover:scale-105 transition-all border border-[#D4A955]/40"
+              >
+                <span>{t('संपूर्ण दिनविशेष पहा', 'Explore Complete Dinvishesh')}</span>
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+
+            {/* Master 3D Dinvishesh Interactive Card */}
+            <div className="mt-4">
+              <Dinvishesh3DCard
+                event={todayDinvishesh}
+                theme="dark"
+                showNavControls={false}
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* 3. FORT SPOTLIGHT */}
       {spotlight && (

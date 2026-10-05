@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from uuid import UUID
 from datetime import datetime, date
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -156,6 +156,7 @@ class ImageUploadResponse(BaseModel):
 class VolunteerCreate(BaseModel):
     fullName: str = Field(..., min_length=1, max_length=150)
     age: Optional[int] = Field(None, ge=15, le=75)
+    dateOfBirth: Optional[str] = Field(None, max_length=10)  # YYYY-MM-DD format
     phone: str = Field(..., min_length=1, max_length=30)
     email: EmailStr = Field(..., max_length=255)
     district: Optional[str] = Field(None, max_length=80)
@@ -184,6 +185,7 @@ class VolunteerRecord(BaseModel):
     id: UUID
     full_name: str
     age: Optional[int] = None
+    date_of_birth: Optional[str] = None
     phone: str
     email: str
     district: Optional[str] = None
@@ -309,6 +311,328 @@ class AdminStatsResponse(BaseModel):
     totalProjectsCount: int
     totalNewsCount: int
     totalGalleryCount: int
+    totalStudentsCount: int = 0
+    totalTeamMembersCount: int = 0
+    totalOrganizationsCount: int = 0
+    totalPartnerOrgsCount: int = 0
+    totalEducationProgramsCount: int = 0
+    totalCertificateTemplatesCount: int = 0
     recentDonations: List[DonationRecord]
     recentVolunteers: List[VolunteerRecord]
     recentContacts: List[ContactRecord]
+
+# ============================================================================
+# 12. Team Members Schemas
+# ============================================================================
+class TeamMemberCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=150)
+    nameEn: str = ""
+    role: str = ""
+    roleEn: str = ""
+    photo: str = ""
+    introduction: str = ""
+    introductionEn: str = ""
+    responsibilities: str = ""
+    responsibilitiesEn: str = ""
+    contribution: str = ""
+    contributionEn: str = ""
+    displayOrder: int = 0
+    isActive: bool = True
+
+class TeamMemberRecord(BaseModel):
+    id: str
+    name: str
+    nameEn: str = ""
+    role: str = ""
+    roleEn: str = ""
+    photo: str = ""
+    introduction: str = ""
+    introductionEn: str = ""
+    responsibilities: str = ""
+    responsibilitiesEn: str = ""
+    contribution: str = ""
+    contributionEn: str = ""
+    displayOrder: int = 0
+    isActive: bool = True
+
+# ============================================================================
+# 13. Organizations Schemas
+# ============================================================================
+class OrganizationCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    nameEn: str = ""
+    introduction: str = ""
+    introductionEn: str = ""
+    activities: str = ""
+    activitiesEn: str = ""
+    initiatives: str = ""
+    initiativesEn: str = ""
+    achievements: str = ""
+    achievementsEn: str = ""
+    image: str = ""
+    extraImages: List[str] = Field(default_factory=list)
+    contactInfo: str = ""
+    website: str = ""
+    isActive: bool = True
+
+class OrganizationRecord(BaseModel):
+    id: str
+    name: str
+    nameEn: str = ""
+    introduction: str = ""
+    introductionEn: str = ""
+    activities: str = ""
+    activitiesEn: str = ""
+    initiatives: str = ""
+    initiativesEn: str = ""
+    achievements: str = ""
+    achievementsEn: str = ""
+    image: str = ""
+    extraImages: List[str] = Field(default_factory=list)
+    contactInfo: str = ""
+    website: str = ""
+    isActive: bool = True
+
+# ============================================================================
+# 14. Partner Organizations Schemas
+# ============================================================================
+class PartnerOrgCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    nameEn: str = ""
+    logo: str = ""
+    description: str = ""
+    descriptionEn: str = ""
+    partnerType: str = "organization"
+    partnershipDetails: str = ""
+    partnershipDetailsEn: str = ""
+    relatedActivities: str = ""
+    relatedActivitiesEn: str = ""
+    website: str = ""
+    contactInfo: str = ""
+    isActive: bool = True
+
+class PartnerOrgRecord(BaseModel):
+    id: str
+    name: str
+    nameEn: str = ""
+    logo: str = ""
+    description: str = ""
+    descriptionEn: str = ""
+    partnerType: str = "organization"
+    partnershipDetails: str = ""
+    partnershipDetailsEn: str = ""
+    relatedActivities: str = ""
+    relatedActivitiesEn: str = ""
+    website: str = ""
+    contactInfo: str = ""
+    isActive: bool = True
+
+# ============================================================================
+# 15. Students Schemas (Auth)
+# ============================================================================
+class StudentRegisterRequest(BaseModel):
+    fullName: str = Field(..., min_length=1, max_length=150)
+    email: EmailStr
+    phone: str = Field("", max_length=30)
+    password: str = Field(..., min_length=6, max_length=100)
+    studentType: str = Field("school", max_length=30)
+    institution: str = ""
+    classYear: str = ""
+    district: str = ""
+
+class StudentLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class StudentLoginResponse(BaseModel):
+    token: str
+    studentId: str
+    fullName: str
+    email: str
+    studentType: str
+    message: str
+
+class StudentRecord(BaseModel):
+    id: str
+    fullName: str
+    email: str
+    phone: str = ""
+    studentType: str = "school"
+    institution: str = ""
+    classYear: str = ""
+    district: str = ""
+    profilePhoto: str = ""
+    isActive: bool = True
+    createdAt: Optional[str] = None
+
+# ============================================================================
+# 16. Student Participations Schemas
+# ============================================================================
+class StudentParticipationCreate(BaseModel):
+    studentId: str
+    activityType: str = "quiz"
+    activityTitle: str
+    score: int = 0
+    maxScore: int = 0
+    status: str = "completed"
+    certificateId: str = ""
+
+class StudentParticipationRecord(BaseModel):
+    id: str
+    studentId: str
+    activityType: str = "quiz"
+    activityTitle: str
+    score: int = 0
+    maxScore: int = 0
+    status: str = "completed"
+    certificateId: str = ""
+    completedAt: Optional[str] = None
+
+# ============================================================================
+# 17. Certificate Templates Schemas
+# ============================================================================
+class CertificateTemplateCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    designUrl: str = ""
+    templateType: str = "participation"
+    bgColor: str = "#FFFDF9"
+    borderColor: str = "#B58A45"
+    titleText: str = "प्रमाणपत्र"
+    subtitleText: str = ""
+    footerText: str = "गडकिल्ले संवर्धन प्रतिष्ठान"
+    isDefault: bool = False
+    isActive: bool = True
+
+class CertificateTemplateRecord(BaseModel):
+    id: str
+    name: str
+    designUrl: str = ""
+    templateType: str = "participation"
+    bgColor: str = "#FFFDF9"
+    borderColor: str = "#B58A45"
+    titleText: str = "प्रमाणपत्र"
+    subtitleText: str = ""
+    footerText: str = "गडकिल्ले संवर्धन प्रतिष्ठान"
+    isDefault: bool = False
+    isActive: bool = True
+
+# ============================================================================
+# 18. Education Programs Schemas
+# ============================================================================
+class EducationProgramCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    titleEn: str = ""
+    category: str = "program"
+    description: str = ""
+    descriptionEn: str = ""
+    image: str = ""
+    targetAudience: str = ""
+    targetAudienceEn: str = ""
+    schedule: str = ""
+    status: str = "active"
+    isActive: bool = True
+
+class EducationProgramRecord(BaseModel):
+    id: str
+    title: str
+    titleEn: str = ""
+    category: str = "program"
+    description: str = ""
+    descriptionEn: str = ""
+    image: str = ""
+    targetAudience: str = ""
+    targetAudienceEn: str = ""
+    schedule: str = ""
+    status: str = "active"
+    isActive: bool = True
+
+# ============================================================================
+# 19. Donation Summary Schema
+# ============================================================================
+class DonationSummaryResponse(BaseModel):
+    totalAmount: float = 0
+    totalDonors: int = 0
+    totalDonations: int = 0
+    recentDonations: List[DonationRecord] = []
+    monthlyData: List[dict] = Field(default_factory=list)
+
+# ============================================================================
+# 20. Dinvishesh (Historical Events) Schemas
+# ============================================================================
+class EventSourceItem(BaseModel):
+    id: Optional[str] = None
+    source_name: str = ""
+    source_url: str = ""
+    source_type: str = "Published historical book"
+    source_description: str = ""
+    is_primary: bool = False
+
+class DinvisheshCreate(BaseModel):
+    eventDate: str = Field(..., max_length=10) # e.g. "06-06" or "1674-06-06"
+    day: int = Field(..., ge=1, le=31)
+    month: int = Field(..., ge=1, le=12)
+    year: Optional[int] = None
+    figure: str = Field("छत्रपती शिवाजी महाराज", max_length=100) # Backward compatibility
+    personality: Optional[str] = Field(None, max_length=100) # "छत्रपती शिवाजी महाराज" or "छत्रपती संभाजी महाराज" or "दोन्ही"
+    eventType: str = Field("ऐतिहासिक प्रसंग", max_length=80) # राज्याभिषेक, लढाई / पराक्रम, मुत्सद्देगिरी / तह, दुर्ग स्थापना / विजय, जन्म / जयंती, बलिदान / पुण्यतिथी, प्रशासन व न्याय, आरमार
+    title: str = Field(..., min_length=1, max_length=250)
+    titleEn: str = ""
+    titleMarathi: Optional[str] = None
+    titleEnglish: Optional[str] = None
+    description: str = Field(..., min_length=1)
+    descriptionEn: str = ""
+    descriptionMarathi: Optional[str] = None
+    descriptionEnglish: Optional[str] = None
+    historicalSignificance: str = ""
+    location: str = ""
+    image: str = ""
+    imageUrl: Optional[str] = None
+    keyFigures: List[str] = Field(default_factory=list)
+    sourceName: str = ""
+    sourceUrl: str = ""
+    sourceType: str = "Published historical book"
+    sourceDescription: str = ""
+    verificationStatus: str = "verified" # verified, under_review, archived
+    isDisputed: bool = False
+    disputeNote: str = ""
+    sources: str = ""
+    eventSources: List[EventSourceItem] = Field(default_factory=list)
+    isPublished: bool = True
+
+class DinvisheshRecord(BaseModel):
+    id: str
+    event_date: str
+    day: int
+    month: int
+    year: Optional[int] = None
+    figure: str
+    personality: str = "छत्रपती शिवाजी महाराज"
+    event_type: str = "ऐतिहासिक प्रसंग"
+    title: str
+    title_en: str = ""
+    title_marathi: str = ""
+    title_english: str = ""
+    description: str
+    description_en: str = ""
+    description_marathi: str = ""
+    description_english: str = ""
+    historical_significance: str = ""
+    location: str = ""
+    image: str = ""
+    image_url: str = ""
+    key_figures: List[str] = Field(default_factory=list)
+    source_name: str = ""
+    source_url: str = ""
+    source_type: str = "Published historical book"
+    source_description: str = ""
+    verification_status: str = "verified"
+    is_disputed: bool = False
+    dispute_note: str = ""
+    sources: str = ""
+    event_sources: List[Dict[str, Any]] = Field(default_factory=list)
+    is_published: bool = True
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+

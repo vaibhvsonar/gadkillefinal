@@ -32,6 +32,7 @@ import {
   type ConservationProject,
   type SiteSettings,
   type CertificateData,
+  type DinvisheshRecord,
 } from '@/lib/api';
 import { useSiteData } from '@/context/SiteContext';
 
@@ -128,6 +129,7 @@ function ImageUploadField({ label, value, folder, onChange, required }: ImageUpl
 
 type TabId =
   | 'overview'
+  | 'dinvishesh'
   | 'forts'
   | 'events'
   | 'projects'
@@ -274,19 +276,203 @@ export function AdminPage() {
     setSettingsForm(settings);
   }, [settings]);
 
+  const [dinvisheshList, setDinvisheshList] = useState<DinvisheshRecord[]>([]);
+  const [editingDinId, setEditingDinId] = useState<string | null>(null);
+  const [dinSearch, setDinSearch] = useState('');
+  const [dinFilterFigure, setDinFilterFigure] = useState('all');
+  const [dinFilterStatus, setDinFilterStatus] = useState('all');
+  const [showDinPreview, setShowDinPreview] = useState(false);
+  const [dinForm, setDinForm] = useState<{
+    day: number;
+    month: number;
+    year: number | '';
+    personality: string;
+    eventType: string;
+    titleMarathi: string;
+    titleEnglish: string;
+    descriptionMarathi: string;
+    descriptionEnglish: string;
+    location: string;
+    image: string;
+    historicalSignificance: string;
+    sourceName: string;
+    sourceUrl: string;
+    sourceType: string;
+    sourceDescription: string;
+    verificationStatus: string;
+    isDisputed: boolean;
+    disputeNote: string;
+    keyFiguresStr: string;
+    sources: string;
+    isPublished: boolean;
+  }>({
+    day: 6,
+    month: 6,
+    year: 1674,
+    personality: 'छत्रपती शिवाजी महाराज',
+    eventType: 'राज्याभिषेक',
+    titleMarathi: '',
+    titleEnglish: '',
+    descriptionMarathi: '',
+    descriptionEnglish: '',
+    location: '',
+    image: '',
+    historicalSignificance: '',
+    sourceName: '',
+    sourceUrl: '',
+    sourceType: 'Published historical book',
+    sourceDescription: '',
+    verificationStatus: 'verified',
+    isDisputed: false,
+    disputeNote: '',
+    keyFiguresStr: '',
+    sources: '',
+    isPublished: true,
+  });
+
   const loadStats = async () => {
     setLoading(true);
     try {
-      const [live, certs] = await Promise.all([
+      const [live, certs, dinList] = await Promise.all([
         api.fetchAdminStats(),
         api.getCertificates().catch(() => []),
+        api.getDinvishesh().catch(() => []),
       ]);
       setStats(live);
       setCertificates(certs);
+      setDinvisheshList(dinList);
     } catch (err: any) {
       setStatusBanner(`⚠️ बॅकएंड कनेक्शन त्रुटी: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveDinvishesh = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dinForm.titleMarathi.trim() || !dinForm.descriptionMarathi.trim()) {
+      setStatusBanner('⚠️ कृपया मराठी शीर्षक आणि सविस्तर वर्णन पूर्ण भरा.');
+      return;
+    }
+
+    const keyFigures = dinForm.keyFiguresStr
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    const eventDate = `${pad(dinForm.month)}-${pad(dinForm.day)}`;
+
+    const payload = {
+      eventDate,
+      event_date: eventDate,
+      day: Number(dinForm.day),
+      month: Number(dinForm.month),
+      year: dinForm.year === '' ? undefined : Number(dinForm.year),
+      figure: dinForm.personality,
+      personality: dinForm.personality,
+      eventType: dinForm.eventType,
+      event_type: dinForm.eventType,
+      title: dinForm.titleMarathi,
+      titleMarathi: dinForm.titleMarathi,
+      title_marathi: dinForm.titleMarathi,
+      titleEn: dinForm.titleEnglish,
+      titleEnglish: dinForm.titleEnglish,
+      title_en: dinForm.titleEnglish,
+      title_english: dinForm.titleEnglish,
+      description: dinForm.descriptionMarathi,
+      descriptionMarathi: dinForm.descriptionMarathi,
+      description_marathi: dinForm.descriptionMarathi,
+      descriptionEn: dinForm.descriptionEnglish,
+      descriptionEnglish: dinForm.descriptionEnglish,
+      description_en: dinForm.descriptionEnglish,
+      description_english: dinForm.descriptionEnglish,
+      location: dinForm.location,
+      image: dinForm.image,
+      imageUrl: dinForm.image,
+      image_url: dinForm.image,
+      historicalSignificance: dinForm.historicalSignificance,
+      historical_significance: dinForm.historicalSignificance,
+      sourceName: dinForm.sourceName,
+      source_name: dinForm.sourceName,
+      sourceUrl: dinForm.sourceUrl,
+      source_url: dinForm.sourceUrl,
+      sourceType: dinForm.sourceType,
+      source_type: dinForm.sourceType,
+      sourceDescription: dinForm.sourceDescription,
+      source_description: dinForm.sourceDescription,
+      verificationStatus: dinForm.verificationStatus,
+      verification_status: dinForm.verificationStatus,
+      isDisputed: dinForm.isDisputed,
+      is_disputed: dinForm.isDisputed,
+      disputeNote: dinForm.disputeNote,
+      dispute_note: dinForm.disputeNote,
+      keyFigures,
+      key_figures: keyFigures,
+      sources: dinForm.sources || dinForm.sourceName,
+      isPublished: dinForm.isPublished,
+      is_published: dinForm.isPublished,
+    };
+
+    try {
+      if (editingDinId) {
+        await api.updateDinvishesh(editingDinId, payload);
+        setStatusBanner(`✅ ऐतिहासिक घटना "${dinForm.titleMarathi}" अद्ययावत झाली!`);
+      } else {
+        await api.createDinvishesh(payload);
+        setStatusBanner(`✅ नवीन ऐतिहासिक प्रसंग "${dinForm.titleMarathi}" जोडला गेला!`);
+      }
+
+      setEditingDinId(null);
+      setDinForm({
+        day: 6,
+        month: 6,
+        year: 1674,
+        personality: 'छत्रपती शिवाजी महाराज',
+        eventType: 'राज्याभिषेक',
+        titleMarathi: '',
+        titleEnglish: '',
+        descriptionMarathi: '',
+        descriptionEnglish: '',
+        location: '',
+        image: '',
+        historicalSignificance: '',
+        sourceName: '',
+        sourceUrl: '',
+        sourceType: 'Published historical book',
+        sourceDescription: '',
+        verificationStatus: 'verified',
+        isDisputed: false,
+        disputeNote: '',
+        keyFiguresStr: '',
+        sources: '',
+        isPublished: true,
+      });
+      setShowDinPreview(false);
+      await loadStats();
+    } catch (err: any) {
+      setStatusBanner(`❌ त्रुटी: ${err.message}`);
+    }
+  };
+
+  const handleDeleteDinvishesh = async (id: string) => {
+    if (!window.confirm('तुम्हाला खरोखर ही ऐतिहासिक घटना हटवायची आहे का?')) return;
+    try {
+      await api.deleteDinvishesh(id);
+      setStatusBanner('✅ प्रसंग हटवला गेला!');
+      await loadStats();
+    } catch (err: any) {
+      setStatusBanner(`❌ ${err.message}`);
+    }
+  };
+
+  const handleTogglePublishDinvishesh = async (item: DinvisheshRecord) => {
+    try {
+      await api.updateDinvishesh(item.id, { is_published: !item.is_published });
+      setStatusBanner(`✅ स्थिती बदलली: ${!item.is_published ? 'प्रकाशित' : 'अप्रकाशित'}`);
+      await loadStats();
+    } catch (err: any) {
+      setStatusBanner(`❌ ${err.message}`);
     }
   };
 
@@ -568,6 +754,7 @@ export function AdminPage() {
 
   const navItems: { id: TabId; label: string; icon: any; count?: number }[] = [
     { id: 'overview', label: 'डॅशबोर्ड आढावा', icon: LayoutDashboard },
+    { id: 'dinvishesh', label: 'दिनविशेष (ऐतिहासिक कॅलेंडर)', icon: CalendarDays, count: dinvisheshList.length },
     { id: 'forts', label: 'गडकिल्ले (Forts)', icon: Castle, count: forts.length },
     { id: 'events', label: 'कार्यक्रम (Events)', icon: CalendarDays, count: events.length },
     { id: 'projects', label: 'संवर्धन प्रकल्प', icon: Hammer, count: projects.length },
@@ -1672,36 +1859,635 @@ export function AdminPage() {
           </div>
         )}
 
-        {/* 9. CONTACTS TAB */}
-        {activeTab === 'contacts' && (
-          <div className="bg-[#1a1f2e] rounded-2xl border border-white/10 p-5 space-y-3">
-            <h3 className="font-bold text-sm">✉️ संपर्क संदेश ({stats.recentContacts.length})</h3>
-            {stats.recentContacts.map(c => (
-              <div
-                key={c.id}
-                className="p-4 rounded-xl bg-white/5 flex justify-between items-start gap-4"
-              >
-                <div>
-                  <div className="font-bold text-sm">
-                    {c.full_name}{' '}
-                    <span className="text-xs text-[#D4A955]">({c.subject})</span>
-                  </div>
-                  <div className="text-xs text-white/40 mb-1">
-                    {c.email} · {c.phone}
-                  </div>
-                  <p className="text-xs text-white/80">{c.message}</p>
-                </div>
-                <button
-                  onClick={async () => {
-                    await api.deleteContact(c.id);
-                    await loadStats();
-                  }}
-                  className="p-1.5 rounded bg-red-500/20 text-red-400 shrink-0"
-                >
-                  <Trash2 size={14} />
-                </button>
+        {/* DINVISHESH MANAGEMENT TAB */}
+        {activeTab === 'dinvishesh' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-4 bg-[#1a1f2e] p-6 rounded-2xl border border-white/10">
+              <div>
+                <h3 className="font-bold text-lg text-[#D4A955]">
+                  🚩 दिनविशेष व्यवस्थापन (Dinvishesh Management)
+                </h3>
+                <p className="text-xs text-white/50 mt-1">
+                  छत्रपती शिवाजी महाराज व छत्रपती संभाजी महाराज यांच्या ऐतिहासिक घटनांची नोंद व प्रकाशन करा.
+                </p>
               </div>
-            ))}
+
+              <button
+                onClick={() => setShowDinPreview(!showDinPreview)}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center gap-2 border border-white/15"
+              >
+                👁️ {showDinPreview ? 'फॉर्मवर परत जा' : 'कार्डाचे पूर्वदृश्य (Live Preview)'}
+              </button>
+            </div>
+
+            {/* Event Form */}
+            <form
+              onSubmit={handleSaveDinvishesh}
+              className="bg-[#1a1f2e] rounded-2xl p-6 border border-white/10 space-y-4"
+            >
+              <h4 className="font-bold text-sm text-[#F4956A]">
+                {editingDinId ? '✏️ ऐतिहासिक घटना संपादित करा' : '➕ नवीन ऐतिहासिक घटना जोडा'}
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">दिवस (Day 1-31) *</label>
+                  <select
+                    value={dinForm.day}
+                    onChange={e => setDinForm({ ...dinForm, day: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={d} className="bg-[#1a1f2e]">
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">महिना (Month 1-12) *</label>
+                  <select
+                    value={dinForm.month}
+                    onChange={e => setDinForm({ ...dinForm, month: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  >
+                    {[
+                      '१- जानेवारी', '२- फेब्रुवारी', '३- मार्च', '४- एप्रिल',
+                      '५- मे', '६- जून', '७- जुलै', '८- ऑगस्ट',
+                      '९- सप्टेंबर', '१०- ऑक्टोबर', '११- नोव्हेंबर', '१२- डिसेंबर'
+                    ].map((m, idx) => (
+                      <option key={idx + 1} value={idx + 1} className="bg-[#1a1f2e]">
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">ऐतिहासिक वर्ष (उदा. 1674)</label>
+                  <input
+                    type="number"
+                    placeholder="उदा. 1674"
+                    value={dinForm.year}
+                    onChange={e =>
+                      setDinForm({
+                        ...dinForm,
+                        year: e.target.value === '' ? '' : Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">संबंधित महापुरुष *</label>
+                  <select
+                    value={dinForm.personality}
+                    onChange={e => setDinForm({ ...dinForm, personality: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  >
+                    <option value="छत्रपती शिवाजी महाराज" className="bg-[#1a1f2e]">
+                      छत्रपती शिवाजी महाराज
+                    </option>
+                    <option value="छत्रपती संभाजी महाराज" className="bg-[#1a1f2e]">
+                      छत्रपती संभाजी महाराज
+                    </option>
+                    <option value="छत्रपती शिवाजी महाराज व संभाजी महाराज" className="bg-[#1a1f2e]">
+                      दोन्ही (Both)
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">घटनेचा प्रकार (Event Category) *</label>
+                  <select
+                    value={dinForm.eventType}
+                    onChange={e => setDinForm({ ...dinForm, eventType: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  >
+                    <option value="राज्याभिषेक" className="bg-[#1a1f2e]">राज्याभिषेक (Coronation)</option>
+                    <option value="लढाई / पराक्रम" className="bg-[#1a1f2e]">लढाई / पराक्रम (Military Campaign)</option>
+                    <option value="मुत्सद्देगिरी / तह" className="bg-[#1a1f2e]">मुत्सद्देगिरी / तह (Diplomacy & Treaty)</option>
+                    <option value="दुर्ग स्थापना / विजय" className="bg-[#1a1f2e]">दुर्ग स्थापना / विजय (Fort Acquisition)</option>
+                    <option value="जन्म / जयंती" className="bg-[#1a1f2e]">जन्म / जयंती (Birth Anniversary)</option>
+                    <option value="बलिदान / पुण्यतिथी" className="bg-[#1a1f2e]">बलिदान / पुण्यतिथी (Martyrdom / Remembrance)</option>
+                    <option value="प्रशासन व न्याय" className="bg-[#1a1f2e]">प्रशासन व न्याय (Governance & Decrees)</option>
+                    <option value="आरमार" className="bg-[#1a1f2e]">आरमार व सागरी मोहीम (Naval Expeditions)</option>
+                    <option value="इतर" className="bg-[#1a1f2e]">इतर ऐतिहासिक प्रसंग (Other)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">स्थान / किल्ला (Location)</label>
+                  <input
+                    type="text"
+                    placeholder="उदा. रायगड किल्ला (Raigad Fort)"
+                    value={dinForm.location}
+                    onChange={e => setDinForm({ ...dinForm, location: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">महत्त्वाच्या व्यक्ती (Key Figures - स्वल्पविराम द्या)</label>
+                  <input
+                    type="text"
+                    placeholder="उदा. गागाभट्ट, सोयराबाई, मोरोपंत पिंगळे"
+                    value={dinForm.keyFiguresStr}
+                    onChange={e => setDinForm({ ...dinForm, keyFiguresStr: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">घटनेचे शीर्षक (मराठी) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="उदा. छत्रपती शिवाजी महाराज शिवराज्याभिषेक सोहळा"
+                    value={dinForm.titleMarathi}
+                    onChange={e => setDinForm({ ...dinForm, titleMarathi: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">Event Title (English)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Coronation of Chhatrapati Shivaji Maharaj"
+                    value={dinForm.titleEnglish}
+                    onChange={e => setDinForm({ ...dinForm, titleEnglish: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">सविस्तर ऐतिहासिक वर्णन (मराठी) *</label>
+                  <textarea
+                    rows={4}
+                    required
+                    placeholder="घटनेचा सविस्तर इतिहास, प्रसंग व पार्श्वभूमी..."
+                    value={dinForm.descriptionMarathi}
+                    onChange={e => setDinForm({ ...dinForm, descriptionMarathi: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">Detailed Description (English)</label>
+                  <textarea
+                    rows={4}
+                    placeholder="Detailed historical explanation in English..."
+                    value={dinForm.descriptionEnglish}
+                    onChange={e => setDinForm({ ...dinForm, descriptionEnglish: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-white/60 mb-1 font-semibold">ऐतिहासिक महत्त्व व परिणाम (Historical Significance)</label>
+                <textarea
+                  rows={2}
+                  placeholder="उदा. सार्वभौम स्वतंत्र मराठा स्वराज्य निर्मितीची आंतरराष्ट्रीय मान्यता..."
+                  value={dinForm.historicalSignificance}
+                  onChange={e => setDinForm({ ...dinForm, historicalSignificance: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                />
+              </div>
+
+              <ImageUploadField
+                label="ऐतिहासिक चित्र / छायाचित्र (Historical Image URL)"
+                folder="dinvishesh"
+                value={dinForm.image}
+                onChange={url => setDinForm({ ...dinForm, image: url })}
+              />
+
+              {/* Historical Data Source System */}
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-amber-500/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h5 className="text-xs font-bold text-[#D4A955] uppercase tracking-wider flex items-center gap-2">
+                    📜 ऐतिहासिक संदर्भ व प्रमाण प्रणाली (Historical Source & Verification)
+                  </h5>
+                  <span className="text-[11px] text-white/50">प्रमाणित माहिती स्रोत बंधनकारक</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1 font-semibold">मुख्य ऐतिहासिक स्रोत नाव (Source Name) *</label>
+                    <input
+                      type="text"
+                      placeholder="उदा. सभासद बखर / जेधे शकावली / Maasir-i-Alamgiri"
+                      value={dinForm.sourceName}
+                      onChange={e => setDinForm({ ...dinForm, sourceName: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1 font-semibold">स्रोत प्रकार (Source Type)</label>
+                    <select
+                      value={dinForm.sourceType}
+                      onChange={e => setDinForm({ ...dinForm, sourceType: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                    >
+                      <option value="Published historical book" className="bg-[#1a1f2e]">Published historical book (प्रकाशित ऐतिहासिक ग्रंथ)</option>
+                      <option value="Museum / Archive" className="bg-[#1a1f2e]">Museum / Archive (पुराभिलेख व वस्तुसंग्रहालय)</option>
+                      <option value="Government publication" className="bg-[#1a1f2e]">Government publication (शासकीय गॅझेटियर / पुराभिलेख)</option>
+                      <option value="Academic source" className="bg-[#1a1f2e]">Academic source (संशोधन निबंध / विद्यापीठ अभ्यास)</option>
+                      <option value="Google Arts & Culture" className="bg-[#1a1f2e]">Google Arts & Culture</option>
+                      <option value="Wikimedia Commons" className="bg-[#1a1f2e]">Wikimedia Commons</option>
+                      <option value="Wikipedia" className="bg-[#1a1f2e]">Wikipedia (Secondary)</option>
+                      <option value="Other reliable reference" className="bg-[#1a1f2e]">Other reliable reference</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1 font-semibold">पडताळणी स्थिती (Verification Status)</label>
+                    <select
+                      value={dinForm.verificationStatus}
+                      onChange={e => setDinForm({ ...dinForm, verificationStatus: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                    >
+                      <option value="verified" className="bg-[#1a1f2e]">✅ प्रमाणित (Verified by Source)</option>
+                      <option value="under_review" className="bg-[#1a1f2e]">⏳ पुनरावलोकनाधीन (Under Review)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1 font-semibold">स्रोत लिंक / URL (Source URL)</label>
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={dinForm.sourceUrl}
+                      onChange={e => setDinForm({ ...dinForm, sourceUrl: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1 font-semibold">स्रोत संदर्भ तपशील (पृष्ठ क्र., खंड, प्रत)</label>
+                    <input
+                      type="text"
+                      placeholder="उदा. खंड १, पृष्ठ ४४-४८, संपादन: प्रा. सेतुमाधवराव पगडी"
+                      value={dinForm.sourceDescription}
+                      onChange={e => setDinForm({ ...dinForm, sourceDescription: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-white/60 mb-1 font-semibold">अतिरिक्त संदर्भ यादी (Multiple References)</label>
+                  <input
+                    type="text"
+                    placeholder="उदा. ९१ कलमी बखर, इंग्रजी फॅक्टरी रेकॉर्ड्स, शिवभारत"
+                    value={dinForm.sources}
+                    onChange={e => setDinForm({ ...dinForm, sources: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-white text-xs"
+                  />
+                </div>
+
+                {/* Disputed Date Toggle */}
+                <div className="pt-2 border-t border-white/10 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="din-disputed"
+                      checked={dinForm.isDisputed}
+                      onChange={e => setDinForm({ ...dinForm, isDisputed: e.target.checked })}
+                      className="rounded bg-white/10 border-white/20 text-[#A84A20] focus:ring-0"
+                    />
+                    <label htmlFor="din-disputed" className="text-xs text-amber-300 font-semibold cursor-pointer">
+                      ⚠️ या घटनेच्या तारखेबाबत विविध ऐतिहासिक स्रोतांमध्ये मतभेद आहेत का?
+                    </label>
+                  </div>
+                  {dinForm.isDisputed && (
+                    <input
+                      type="text"
+                      placeholder="मतभेदाचा तपशील (उदा. जेधे शकावलीनुसार ६ जून तर इंग्रज पत्रात १६ मे अशी नोंद आढळते.)"
+                      value={dinForm.disputeNote}
+                      onChange={e => setDinForm({ ...dinForm, disputeNote: e.target.value })}
+                      className="w-full px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="din-published"
+                  checked={dinForm.isPublished}
+                  onChange={e => setDinForm({ ...dinForm, isPublished: e.target.checked })}
+                  className="rounded bg-white/10 border-white/20 text-[#A84A20] focus:ring-0"
+                />
+                <label htmlFor="din-published" className="text-xs text-white font-medium cursor-pointer">
+                  वेबसाइटवर तात्काळ प्रकाशित करा (Publish Event Live)
+                </label>
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-[#A84A20] hover:bg-[#c15a2a] text-white font-bold text-xs flex items-center gap-2 shadow-lg"
+                >
+                  <Save size={15} /> {editingDinId ? 'बदल सेव्ह करा' : 'ऐतिहासिक घटना जोडा'}
+                </button>
+
+                {editingDinId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingDinId(null);
+                      setDinForm({
+                        day: 6,
+                        month: 6,
+                        year: 1674,
+                        personality: 'छत्रपती शिवाजी महाराज',
+                        eventType: 'राज्याभिषेक',
+                        titleMarathi: '',
+                        titleEnglish: '',
+                        descriptionMarathi: '',
+                        descriptionEnglish: '',
+                        location: '',
+                        image: '',
+                        historicalSignificance: '',
+                        sourceName: '',
+                        sourceUrl: '',
+                        sourceType: 'Published historical book',
+                        sourceDescription: '',
+                        verificationStatus: 'verified',
+                        isDisputed: false,
+                        disputeNote: '',
+                        keyFiguresStr: '',
+                        sources: '',
+                        isPublished: true,
+                      });
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white/80"
+                  >
+                    रद्द करा
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Event Preview Component */}
+            {showDinPreview && (
+              <div className="p-6 bg-[#16120b] text-[#f4ecd8] rounded-3xl border-2 border-[#D4A955]/40 space-y-4 shadow-2xl">
+                <div className="text-xs font-bold text-[#D4A955] uppercase tracking-wider flex items-center gap-2">
+                  👁️ थेट कार्ड पूर्वदृश्य (Live Card Preview)
+                </div>
+                <div className="bg-[#20180f] p-6 rounded-2xl border border-[#D4A955]/20 shadow-xl space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-[#A84A20] text-white text-xs font-bold rounded-full">
+                        {dinForm.personality}
+                      </span>
+                      <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-300 text-xs font-medium rounded-full">
+                        {dinForm.eventType}
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-[#D4A955]">
+                      तारीख: {dinForm.day}/{dinForm.month} {dinForm.year && `(${dinForm.year} ई.स.)`}
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-2xl font-bold text-white">
+                    {dinForm.titleMarathi || 'घटनेचे शीर्षक येथे दिसेल'}
+                  </h3>
+
+                  {dinForm.location && (
+                    <div className="text-xs text-amber-200/80">📍 स्थान: {dinForm.location}</div>
+                  )}
+
+                  {dinForm.image && (
+                    <img src={dinForm.image} alt="Preview" className="w-full h-52 object-cover rounded-xl border border-white/10" />
+                  )}
+
+                  <p className="text-xs sm:text-sm text-stone-300 leading-relaxed">
+                    {dinForm.descriptionMarathi || 'सविस्तर ऐतिहासिक वर्णन येथे दिसेल...'}
+                  </p>
+
+                  {dinForm.historicalSignificance && (
+                    <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/20 text-xs text-amber-200">
+                      <strong>🚩 ऐतिहासिक महत्त्व:</strong> {dinForm.historicalSignificance}
+                    </div>
+                  )}
+
+                  {dinForm.isDisputed && (
+                    <div className="p-3 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-200">
+                      ⚠️ <strong>ऐतिहासिक नोंद:</strong> या घटनेच्या तारखेबाबत विविध ऐतिहासिक स्रोतांमध्ये मतभेद आढळतात.
+                      {dinForm.disputeNote && ` (${dinForm.disputeNote})`}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-stone-400 bg-black/40 p-3 rounded-xl border border-white/10 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      📚 <strong>मुख्य स्रोत:</strong> {dinForm.sourceName || 'नोंदवलेला नाही'} ({dinForm.sourceType})
+                      {dinForm.sources && ` | संदर्भ: ${dinForm.sources}`}
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      dinForm.verificationStatus === 'verified' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                    }`}>
+                      {dinForm.verificationStatus === 'verified' ? '✅ प्रमाणित' : '⏳ तपासणी बाकी'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#1a1f2e] p-4 rounded-2xl border border-white/10">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="शोधा (शीर्षक, तारीख, वर्ष, स्थान)..."
+                  value={dinSearch}
+                  onChange={e => setDinSearch(e.target.value)}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white w-full sm:w-64 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-white/60 font-semibold">महापुरुष:</span>
+                  <select
+                    value={dinFilterFigure}
+                    onChange={e => setDinFilterFigure(e.target.value)}
+                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white"
+                  >
+                    <option value="all" className="bg-[#1a1f2e]">सर्व प्रसंग</option>
+                    <option value="छत्रपती शिवाजी महाराज" className="bg-[#1a1f2e]">छत्रपती शिवाजी महाराज</option>
+                    <option value="छत्रपती संभाजी महाराज" className="bg-[#1a1f2e]">छत्रपती संभाजी महाराज</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-white/60 font-semibold">स्थिती:</span>
+                  <select
+                    value={dinFilterStatus}
+                    onChange={e => setDinFilterStatus(e.target.value)}
+                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white"
+                  >
+                    <option value="all" className="bg-[#1a1f2e]">सर्व स्थिती</option>
+                    <option value="verified" className="bg-[#1a1f2e]">✅ प्रमाणित (Verified)</option>
+                    <option value="under_review" className="bg-[#1a1f2e]">⏳ पुनरावलोकन (Under Review)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Dinvishesh List */}
+            <div className="bg-[#1a1f2e] rounded-2xl border border-white/10 overflow-hidden">
+              <div className="p-4 bg-white/5 font-bold text-xs text-[#D4A955]">
+                नोंदवलेल्या ऐतिहासिक घटनांची यादी ({dinvisheshList.length})
+              </div>
+
+              <div className="divide-y divide-white/5">
+                {dinvisheshList
+                  .filter(item => {
+                    const figure = item.personality || item.figure || '';
+                    if (dinFilterFigure !== 'all' && !figure.includes(dinFilterFigure)) return false;
+                    const status = item.verification_status || item.verificationStatus || 'verified';
+                    if (dinFilterStatus !== 'all' && status !== dinFilterStatus) return false;
+                    if (dinSearch.trim()) {
+                      const q = dinSearch.toLowerCase();
+                      const matchTitle = (item.title_marathi || item.title || '').toLowerCase().includes(q) ||
+                        (item.title_english || item.title_en || '').toLowerCase().includes(q);
+                      const matchDate = (item.event_date || '').includes(q) || `${item.day}/${item.month}`.includes(q);
+                      const matchLoc = (item.location || '').toLowerCase().includes(q);
+                      const matchYear = String(item.year || '').includes(q);
+                      if (!matchTitle && !matchDate && !matchLoc && !matchYear) return false;
+                    }
+                    return true;
+                  })
+                  .map(item => (
+                    <div key={item.id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-white/[0.02]">
+                      <div className="flex items-start gap-4">
+                        {item.image_url || item.image ? (
+                          <img src={item.image_url || item.image} alt={item.title_marathi || item.title} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-white/10" />
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-white/5 flex items-center justify-center text-xs text-white/40 shrink-0">
+                            फोटो नाही
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="px-2.5 py-0.5 rounded-full bg-[#A84A20]/30 text-[#F4956A] text-[10px] font-bold">
+                              {item.personality || item.figure}
+                            </span>
+                            {(item.event_type || item.eventType) && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 text-[10px] font-semibold">
+                                {item.event_type || item.eventType}
+                              </span>
+                            )}
+                            <span className="text-xs font-bold text-[#D4A955]">
+                              {item.day}/{item.month} {item.year && `(${item.year})`}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                item.is_published
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : 'bg-amber-500/20 text-amber-400'
+                              }`}
+                            >
+                              {item.is_published ? 'प्रकाशित' : 'अप्रकाशित'}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                (item.verification_status || item.verificationStatus) === 'verified'
+                                  ? 'bg-emerald-500/10 text-emerald-300'
+                                  : 'bg-amber-500/10 text-amber-300'
+                              }`}
+                            >
+                              {(item.verification_status || item.verificationStatus) === 'verified' ? 'प्रमाणित' : 'तपासणी बाकी'}
+                            </span>
+                            {(item.is_disputed || item.isDisputed) && (
+                              <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 text-[10px] font-semibold">
+                                मतभेद नोंद
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-sm text-white mb-1">{item.title_marathi || item.title}</h4>
+                          {item.location && (
+                            <div className="text-[11px] text-white/50 mb-1">📍 {item.location}</div>
+                          )}
+                          <p className="text-xs text-white/60 line-clamp-2">{item.description_marathi || item.description}</p>
+                          {(item.source_name || item.sources) && (
+                            <div className="text-[11px] text-[#D4A955]/80 mt-1">
+                              📚 स्त्रोत: {item.source_name || item.sources} {item.source_type && `(${item.source_type})`}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        <button
+                          onClick={() => handleTogglePublishDinvishesh(item)}
+                          className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white font-semibold"
+                          title="Publish / Unpublish"
+                        >
+                          {item.is_published ? 'अप्रकाशित करा' : 'प्रकाशित करा'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingDinId(item.id);
+                            setDinForm({
+                              day: item.day,
+                              month: item.month,
+                              year: item.year || '',
+                              personality: item.personality || item.figure || 'छत्रपती शिवाजी महाराज',
+                              eventType: item.event_type || item.eventType || 'राज्याभिषेक',
+                              titleMarathi: item.title_marathi || item.title || '',
+                              titleEnglish: item.title_english || item.title_en || item.titleEn || '',
+                              descriptionMarathi: item.description_marathi || item.description || '',
+                              descriptionEnglish: item.description_english || item.description_en || item.descriptionEn || '',
+                              location: item.location || '',
+                              image: item.image_url || item.image || '',
+                              historicalSignificance: item.historical_significance || item.historicalSignificance || '',
+                              sourceName: item.source_name || item.sourceName || (item.sources || ''),
+                              sourceUrl: item.source_url || item.sourceUrl || '',
+                              sourceType: item.source_type || item.sourceType || 'Published historical book',
+                              sourceDescription: item.source_description || item.sourceDescription || '',
+                              verificationStatus: item.verification_status || item.verificationStatus || 'verified',
+                              isDisputed: Boolean(item.is_disputed ?? item.isDisputed),
+                              disputeNote: item.dispute_note || item.disputeNote || '',
+                              keyFiguresStr: (item.key_figures || []).join(', '),
+                              sources: item.sources || '',
+                              isPublished: item.is_published ?? true,
+                            });
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+                          title="Edit"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteDinvishesh(item.id)}
+                          className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
 

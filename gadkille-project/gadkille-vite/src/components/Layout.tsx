@@ -13,12 +13,16 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   { id: 'home', href: '/', labelMr: 'मुखपृष्ठ', labelEn: 'Home' },
+  { id: 'dinvishesh', href: '/dinvishesh', labelMr: 'दिनविशेष', labelEn: 'Dinvishesh' },
   {
     id: 'explore',
     labelMr: 'एक्सप्लोर',
     labelEn: 'Explore',
     children: [
       { href: '/forts', labelMr: 'गडकिल्ले', labelEn: 'Forts' },
+      { href: '/dinvishesh', labelMr: 'दिनविशेष (इतिहास)', labelEn: 'Dinvishesh (History)' },
+      { href: '/organizations', labelMr: 'संलग्न संस्था', labelEn: 'Associated Orgs' },
+      { href: '/partners', labelMr: 'भागीदार शाळा व संस्था', labelEn: 'Partner Schools' },
       { href: '/map', labelMr: 'नकाशा', labelEn: 'Interactive Map' },
       { href: '/gallery', labelMr: 'गॅलरी', labelEn: 'Photo Gallery' },
     ],
@@ -39,6 +43,7 @@ const navGroups: NavGroup[] = [
     labelMr: 'सहभाग',
     labelEn: 'Get Involved',
     children: [
+      { href: '/student/login', labelMr: 'विद्यार्थी लॉगिन', labelEn: 'Student Portal' },
       { href: '/volunteer', labelMr: 'स्वयंसेवक बना', labelEn: 'Volunteer' },
       { href: '/certificate', labelMr: 'प्रमाणपत्र', labelEn: 'Certificate' },
       { href: '/transparency', labelMr: 'आर्थिक पारदर्शकता', labelEn: 'Transparency' },
@@ -49,40 +54,42 @@ const navGroups: NavGroup[] = [
 
 const footerColumns = [
   {
-    headingMr: 'गडकिल्ले',
-    headingEn: 'Forts',
+    headingMr: 'गडकिल्ले व इतिहास',
+    headingEn: 'Forts & History',
     links: [
       { href: '/forts', labelMr: 'सर्व गडकिल्ले', labelEn: 'All Forts' },
+      { href: '/dinvishesh', labelMr: 'दिनविशेष (ऐतिहासिक कॅलेंडर)', labelEn: 'Dinvishesh Calendar' },
       { href: '/map', labelMr: 'नकाशा', labelEn: 'Interactive Map' },
       { href: '/gallery', labelMr: 'गॅलरी', labelEn: 'Photo Gallery' },
     ],
   },
   {
-    headingMr: 'संवर्धन',
-    headingEn: 'Conservation',
+    headingMr: 'संवर्धन व शिक्षण',
+    headingEn: 'Conservation & Edu',
     links: [
       { href: '/conservation', labelMr: 'चालू प्रकल्प', labelEn: 'Active Projects' },
       { href: '/events', labelMr: 'कार्यक्रम', labelEn: 'Events & Drives' },
+      { href: '/student/login', labelMr: 'विद्यार्थी पोर्टल', labelEn: 'Student Portal' },
       { href: '/volunteer', labelMr: 'स्वयंसेवक बना', labelEn: 'Become a Volunteer' },
     ],
   },
   {
-    headingMr: 'संस्था',
-    headingEn: 'Organization',
+    headingMr: 'संस्था व पाठबळ',
+    headingEn: 'Organizations',
     links: [
+      { href: '/organizations', labelMr: 'संलग्न संस्था', labelEn: 'Associated Orgs' },
+      { href: '/partners', labelMr: 'सहकारी शाळा', labelEn: 'Partner Schools' },
       { href: '/about', labelMr: 'आमच्याविषयी', labelEn: 'About Us' },
-      { href: '/news', labelMr: 'बातम्या', labelEn: 'News & Articles' },
       { href: '/transparency', labelMr: 'पारदर्शकता', labelEn: 'Transparency' },
-      { href: '/contact', labelMr: 'संपर्क', labelEn: 'Contact Us' },
     ],
   },
   {
-    headingMr: 'मदत व संसाधने',
-    headingEn: 'Support & Resources',
+    headingMr: 'मदत व संपर्क',
+    headingEn: 'Support & Contact',
     links: [
       { href: '/donate', labelMr: 'देणगी द्या', labelEn: 'Donate' },
       { href: '/certificate', labelMr: 'प्रमाणपत्र', labelEn: 'Certificate' },
-      { href: '/education', labelMr: 'शिक्षण', labelEn: 'Education' },
+      { href: '/contact', labelMr: 'संपर्क', labelEn: 'Contact Us' },
     ],
   },
 ];

@@ -115,3 +115,50 @@
   background: rgba(193, 82, 31, 0.25);
   color: #0F0A04;
 }
+
+
+/* ── 3D Card & Historical Particle Utilities ───────────────── */
+.preserve-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes floatParticleSlow {
+  0% {
+    transform: translateY(0px) translateX(0px) scale(0.9);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translateY(-28px) translateX(14px) scale(1.1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(-56px) translateX(-8px) scale(0.85);
+    opacity: 0.08;
+  }
+}
+
+.animate-particle-1 {
+  animation: floatParticleSlow 7s ease-in-out infinite alternate;
+}
+.animate-particle-2 {
+  animation: floatParticleSlow 10s ease-in-out infinite alternate-reverse;
+}
+.animate-particle-3 {
+  animation: floatParticleSlow 8.5s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-particle-1,
+  .animate-particle-2,
+  .animate-particle-3,
+  .float-up,
+  .ken-burns {
+    animation: none !important;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useParams, Link } from 'react-router-dom';
 import {
   MapPin,
   Phone,
@@ -13,9 +14,32 @@ import {
   Landmark,
   Users,
   Leaf,
+  Calendar,
+  Search,
+  Award,
+  BookOpen,
+  GraduationCap,
+  Building2,
+  UserCheck,
+  FileText,
+  ExternalLink,
+  Filter,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { useSiteData } from '@/context/SiteContext';
-import { api, type DonationRecord } from '@/lib/api';
+import {
+  api,
+  type DonationRecord,
+  type DinvisheshRecord,
+  type OrganizationRecord,
+  type PartnerOrgRecord,
+  type StudentRecord,
+  type StudentParticipationRecord,
+} from '@/lib/api';
 import { SectionHeader, EmptyDatabaseState } from '@/components/ui';
 
 // ============================================================================
@@ -817,66 +841,15 @@ export function DonatePage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="donate-project"
-                        className="block text-xs font-medium text-[#6E5945] mb-1"
-                      >
-                        {t('प्रकल्प निवडा', 'Select Project')}
-                      </label>
-                      <select
-                        id="donate-project"
-                        value={projectName}
-                        onChange={e => setProjectName(e.target.value)}
-                        className="w-full border-2 border-[#E8D5A3] rounded-xl px-3.5 py-2 text-sm text-[#1A1008] bg-white focus:border-[#A84A20] focus:outline-none"
-                      >
-                        <option value="सामान्य संवर्धन निधी">
-                          {t('सामान्य संवर्धन निधी', 'General Conservation Fund')}
-                        </option>
-                        {projects.map(p => (
-                          <option key={p.id} value={p.title}>
-                            {p.title} ({p.fort})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="donate-method"
-                        className="block text-xs font-medium text-[#6E5945] mb-1"
-                      >
-                        {t('पेमेंट माध्यम', 'Payment Method')}
-                      </label>
-                      <select
-                        id="donate-method"
-                        value={paymentMethod}
-                        onChange={e => setPaymentMethod(e.target.value)}
-                        className="w-full border-2 border-[#E8D5A3] rounded-xl px-3.5 py-2 text-sm text-[#1A1008] bg-white focus:border-[#A84A20] focus:outline-none"
-                      >
-                        <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
-                        <option value="Card">Debit / Credit Card</option>
-                        <option value="NetBanking">Net Banking / NEFT</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <button
                     type="submit"
-                    disabled={submitting}
-                    className="w-full text-center py-4 rounded-xl font-bold text-white btn-shimmer text-base shadow-lg flex items-center justify-center gap-2 disabled:opacity-60"
+                    disabled={isSubmitting}
+                    className="w-full bg-[#A84A20] hover:bg-[#8F3E1B] text-white font-serif font-bold py-3.5 px-6 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base disabled:opacity-50"
                   >
-                    {submitting ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />{' '}
-                        {t('प्रक्रिया होत आहे...', 'Processing...')}
-                      </>
-                    ) : (
-                      t(
-                        `❤️ ₹${finalAmount.toLocaleString('en-IN')} देणगी द्या`,
-                        `❤️ Donate ₹${finalAmount.toLocaleString('en-IN')}`
-                      )
-                    )}
+                    <Heart size={18} />
+                    {isSubmitting
+                      ? t('प्रक्रिया करत आहे...', 'Processing...')
+                      : t(`₹${finalAmount} देणगी द्या (Scan QR)`, `Donate ₹${finalAmount} (Scan QR)`)}
                   </button>
                 </form>
               )}
@@ -887,3 +860,621 @@ export function DonatePage() {
     </div>
   );
 }
+
+// ============================================================================
+// 11. Dinvishesh - Date-wise Historical Events Page (Featured Slider & Hover UI)
+// ============================================================================
+export { DinvisheshPage } from './DinvisheshPage';
+
+// ============================================================================
+// 6. Organizations & Institutions Page
+// ============================================================================
+export function OrganizationsPage() {
+  const { t } = useSiteData();
+  const [orgs, setOrgs] = useState<OrganizationRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    api.getOrganizations()
+      .then(res => setOrgs(res))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="bg-[#F9F2E3] min-h-screen pt-[68px]">
+      <Helmet>
+        <title>{t('संलग्न संस्था व संघटना | गडकिल्ले संवर्धन', 'Associated Organizations | Gadkille')}</title>
+      </Helmet>
+
+      <div className="bg-[#1A1008] py-16 text-center">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="inline-flex items-center gap-2 mb-3 font-cinzel text-xs uppercase tracking-widest text-[#D4A955]">
+            <Building2 size={14} /> {t('संस्था परिचय', 'Institutions & Organizations')}
+          </div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black text-[#F3E8D0] mb-3">
+            {t('संलग्न संस्था व उपक्रम संघटना', 'Associated Organizations')}
+          </h1>
+          <p className="text-[rgba(243,232,208,0.8)] text-sm sm:text-base max-w-2xl mx-auto">
+            {t(
+              'प्रतिष्ठानशी संलग्न असणाऱ्या प्रमुख संस्था, मंडळे आणि संवर्धन गटांची सविस्तर माहिती.',
+              'Profiles and initiatives of all institutions and working bodies connected with the foundation.'
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-[1200px] mx-auto px-6 py-12">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-[#A84A20]" size={36} />
+          </div>
+        ) : orgs.length === 0 ? (
+          <EmptyDatabaseState title={t('कोणतीही संस्था जोडलेली नाही', 'No organizations found')} />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {orgs.map(org => (
+              <div
+                key={org.id}
+                className="bg-white rounded-2xl overflow-hidden border border-[#E8D5A3] shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div>
+                  {org.image && (
+                    <div className="h-48 overflow-hidden bg-stone-100 relative">
+                      <img src={org.image} alt={org.name} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <h3 className="font-serif text-2xl font-bold text-[#1A1008] mb-2">{org.name}</h3>
+                    <p className="text-xs text-[#8F7A66] mb-4 line-clamp-3">{org.introduction}</p>
+
+                    {org.activities && (
+                      <div className="mb-3">
+                        <span className="text-xs font-bold text-[#A84A20] block mb-1">
+                          कार्य व उपक्रम:
+                        </span>
+                        <p className="text-xs text-[#4A3B2C] line-clamp-2">{org.activities}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-6 pt-0">
+                  <Link
+                    to={`/organizations/${org.id}`}
+                    className="w-full block text-center py-2.5 rounded-xl bg-[#F9F2E3] text-[#A84A20] font-bold text-xs hover:bg-[#A84A20] hover:text-white transition-all border border-[#E8D5A3]"
+                  >
+                    {t('संपूर्ण माहिती व उपक्रम पहा →', 'View Full Profile →')}
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// 7. Organization Detail Page
+// ============================================================================
+export function OrganizationDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { t } = useSiteData();
+  const [org, setOrg] = useState<OrganizationRecord | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (!id) return;
+    api.getOrganizations()
+      .then(res => {
+        const found = res.find(o => o.id === id);
+        setOrg(found || null);
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-[68px] flex items-center justify-center bg-[#F9F2E3]">
+        <Loader2 size={36} className="animate-spin text-[#A84A20]" />
+      </div>
+    );
+  }
+
+  if (!org) {
+    return (
+      <div className="min-h-screen pt-[68px] flex flex-col items-center justify-center bg-[#F9F2E3] p-6 text-center">
+        <h2 className="font-serif text-2xl font-bold text-[#1A1008] mb-2">संस्था सापडली नाही</h2>
+        <Link to="/organizations" className="text-sm font-bold text-[#A84A20]">
+          ← संस्था यादीकडे परत जा
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[#F9F2E3] min-h-screen pt-[68px]">
+      <Helmet>
+        <title>{org.name} | गडकिल्ले संवर्धन</title>
+      </Helmet>
+
+      <div className="bg-[#1A1008] py-16 text-center">
+        <div className="max-w-4xl mx-auto px-6">
+          <h1 className="font-serif text-4xl sm:text-5xl font-black text-[#F3E8D0] mb-3">{org.name}</h1>
+          <p className="text-[rgba(243,232,208,0.8)] text-sm max-w-xl mx-auto">{org.introduction}</p>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 py-12 space-y-8">
+        {org.image && (
+          <div className="rounded-2xl overflow-hidden border border-[#E8D5A3] shadow-md max-h-96">
+            <img src={org.image} alt={org.name} className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl p-8 border border-[#E8D5A3] shadow-sm space-y-6">
+          <div>
+            <h2 className="font-serif text-xl font-bold text-[#1A1008] mb-2">संस्थेचा परिचय</h2>
+            <p className="text-sm text-[#4A3B2C] leading-relaxed whitespace-pre-line">{org.introduction}</p>
+          </div>
+
+          {org.activities && (
+            <div className="pt-4 border-t border-[#F0E6D2]">
+              <h2 className="font-serif text-xl font-bold text-[#1A1008] mb-2">कार्ये व उपक्रम</h2>
+              <p className="text-sm text-[#4A3B2C] leading-relaxed whitespace-pre-line">{org.activities}</p>
+            </div>
+          )}
+
+          {org.initiatives && (
+            <div className="pt-4 border-t border-[#F0E6D2]">
+              <h2 className="font-serif text-xl font-bold text-[#1A1008] mb-2">चालू व भूतकाळातील मोहिमा</h2>
+              <p className="text-sm text-[#4A3B2C] leading-relaxed whitespace-pre-line">{org.initiatives}</p>
+            </div>
+          )}
+
+          {org.achievements && (
+            <div className="pt-4 border-t border-[#F0E6D2]">
+              <h2 className="font-serif text-xl font-bold text-[#1A1008] mb-2">महत्त्वाच्या घडामोडी व यश</h2>
+              <p className="text-sm text-[#4A3B2C] leading-relaxed whitespace-pre-line">{org.achievements}</p>
+            </div>
+          )}
+
+          {org.contactInfo && (
+            <div className="p-4 rounded-xl bg-[#F9F2E3] border border-[#E8D5A3] text-xs text-[#6E5945]">
+              <span className="font-bold text-[#1A1008] block mb-1">संपर्क माहिती:</span>
+              {org.contactInfo}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// 8. Partners & School Collaborations Page
+// ============================================================================
+export function PartnersPage() {
+  const { t } = useSiteData();
+  const [partners, setPartners] = useState<PartnerOrgRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    api.getPartners()
+      .then(res => setPartners(res))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="bg-[#F9F2E3] min-h-screen pt-[68px]">
+      <Helmet>
+        <title>{t('भागीदार व शाळा/महाविद्यालये | गडकिल्ले संवर्धन', 'Partners & Schools | Gadkille')}</title>
+      </Helmet>
+
+      <div className="bg-[#1A1008] py-16 text-center">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="inline-flex items-center gap-2 mb-3 font-cinzel text-xs uppercase tracking-widest text-[#D4A955]">
+            <Users size={14} /> {t('सहभागी संस्था', 'Partner Institutions')}
+          </div>
+          <h1 className="font-serif text-4xl sm:text-5xl font-black text-[#F3E8D0] mb-3">
+            {t('सहकारी संस्था, शाळा व महाविद्यालये', 'Partner Schools & Organizations')}
+          </h1>
+          <p className="text-[rgba(243,232,208,0.8)] text-sm max-w-xl mx-auto">
+            {t('गडकिल्ले संवर्धन मोहिमेत खांद्याला खांदा लावून काम करणाऱ्या संस्था.', 'Schools, colleges and partner groups collaborating with us.')}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-[1200px] mx-auto px-6 py-12">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-[#A84A20]" size={36} />
+          </div>
+        ) : partners.length === 0 ? (
+          <EmptyDatabaseState title={t('कोणतीही भागीदार संस्था जोडलेली नाही', 'No partners found')} />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {partners.map(p => (
+              <div key={p.id} className="bg-white rounded-2xl p-6 border border-[#E8D5A3] shadow-sm flex flex-col justify-between">
+                <div>
+                  {p.logo && (
+                    <img src={p.logo} alt={p.name} className="h-16 w-auto object-contain mb-4" />
+                  )}
+                  <span className="px-2.5 py-0.5 bg-[#F9F2E3] text-[#A84A20] text-xs font-bold rounded mb-2 inline-block">
+                    {p.partnerType === 'school' ? 'शाळा / शाळा मंडळ' : 'सहकारी संघटना'}
+                  </span>
+                  <h3 className="font-serif font-bold text-xl text-[#1A1008] mb-2">{p.name}</h3>
+                  <p className="text-xs text-[#6E5945] mb-3">{p.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// 9. Student Login & Registration Page
+// ============================================================================
+export function StudentLoginPage() {
+  const { t } = useSiteData();
+  const [isRegister, setIsRegister] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [fullName, setFullName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [studentType, setStudentType] = useState<string>('school');
+  const [institution, setInstitution] = useState<string>('');
+  const [district, setDistrict] = useState<string>('');
+  const [classYear, setClassYear] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await api.studentLogin({ email, password });
+      localStorage.setItem('student_token', res.token);
+      localStorage.setItem('student_info', JSON.stringify(res));
+      setMessage({ text: 'लॉगिन यशस्वी! रीडायरेक्ट होत आहे...', type: 'success' });
+      setTimeout(() => {
+        window.location.href = '/student/dashboard';
+      }, 1000);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'लॉगिन अयशस्वी. ईमेल किंवा पासवर्ड तपासा.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+    try {
+      await api.studentRegister({
+        fullName,
+        email,
+        phone,
+        password,
+        studentType,
+        institution,
+        classYear,
+        district,
+      });
+      setMessage({ text: 'नोंदणी यशस्वी! आता लॉगिन करा.', type: 'success' });
+      setIsRegister(false);
+    } catch (err: any) {
+      setMessage({ text: err.message || 'नोंदणी अयशस्वी.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#F9F2E3] min-h-screen pt-[68px] flex items-center justify-center p-6">
+      <Helmet>
+        <title>{t('विद्यार्थी लॉगिन | गडकिल्ले संवर्धन', 'Student Login | Gadkille')}</title>
+      </Helmet>
+
+      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#E8D5A3] shadow-lg">
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 bg-[#A84A20]/10 rounded-2xl flex items-center justify-center mx-auto mb-3 text-[#A84A20]">
+            <GraduationCap size={28} />
+          </div>
+          <h1 className="font-serif text-2xl font-bold text-[#1A1008]">
+            {isRegister ? 'विद्यार्थी खात्याची नोंदणी करा' : 'विद्यार्थी लॉगिन'}
+          </h1>
+          <p className="text-xs text-[#8F7A66] mt-1">
+            शाळा व कॉलेज विद्यार्थ्यांसाठी विशेष पोर्टल
+          </p>
+        </div>
+
+        {message && (
+          <div
+            className={`p-3 rounded-xl text-xs mb-4 flex items-center gap-2 ${
+              message.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'
+            }`}
+          >
+            <AlertCircle size={16} />
+            <span>{message.text}</span>
+          </div>
+        )}
+
+        {!isRegister ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-[#6E5945] mb-1">ईमेल पत्ता (Email)</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="student@gmail.com"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8D5A3] text-sm focus:outline-none focus:border-[#A84A20]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#6E5945] mb-1">पासवर्ड (Password)</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8D5A3] text-sm focus:outline-none focus:border-[#A84A20]"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-[#A84A20] text-white rounded-xl font-bold text-sm shadow hover:bg-[#8D3B18] transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : 'लॉगिन करा'}
+            </button>
+            <div className="text-center pt-3 text-xs text-[#8F7A66]">
+              नवीन विद्यार्थी आहात?{' '}
+              <button
+                type="button"
+                onClick={() => setIsRegister(true)}
+                className="font-bold text-[#A84A20] hover:underline"
+              >
+                इथे नवीन खाते तयार करा
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-[#6E5945] mb-1">विद्यार्थी प्रकार</label>
+              <select
+                value={studentType}
+                onChange={e => setStudentType(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-[#E8D5A3] text-xs bg-white focus:outline-none focus:border-[#A84A20]"
+              >
+                <option value="school">शाळा विद्यार्थी (School Student)</option>
+                <option value="college">कॉलेज विद्यार्थी (College Student)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#6E5945] mb-1">संपूर्ण नाव</label>
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="तुमचे नाव"
+                className="w-full px-3 py-2 rounded-xl border border-[#E8D5A3] text-xs focus:outline-none focus:border-[#A84A20]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#6E5945] mb-1">ईमेल</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="student@gmail.com"
+                className="w-full px-3 py-2 rounded-xl border border-[#E8D5A3] text-xs focus:outline-none focus:border-[#A84A20]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs font-bold text-[#6E5945] mb-1">शाळा / कॉलेज</label>
+                <input
+                  type="text"
+                  value={institution}
+                  onChange={e => setInstitution(e.target.value)}
+                  placeholder="शाळेचे नाव"
+                  className="w-full px-3 py-2 rounded-xl border border-[#E8D5A3] text-xs focus:outline-none focus:border-[#A84A20]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#6E5945] mb-1">इयत्ता / वर्ष</label>
+                <input
+                  type="text"
+                  value={classYear}
+                  onChange={e => setClassYear(e.target.value)}
+                  placeholder="उदा. 9th / FY BA"
+                  className="w-full px-3 py-2 rounded-xl border border-[#E8D5A3] text-xs focus:outline-none focus:border-[#A84A20]"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#6E5945] mb-1">पासवर्ड</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 rounded-xl border border-[#E8D5A3] text-xs focus:outline-none focus:border-[#A84A20]"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-[#A84A20] text-white rounded-xl font-bold text-xs shadow hover:bg-[#8D3B18] transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : 'खाते तयार करा'}
+            </button>
+            <div className="text-center pt-2 text-xs text-[#8F7A66]">
+              आधीपासून खाते आहे?{' '}
+              <button
+                type="button"
+                onClick={() => setIsRegister(false)}
+                className="font-bold text-[#A84A20] hover:underline"
+              >
+                इथे लॉगिन करा
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// 10. Student Dashboard Page
+// ============================================================================
+export function StudentDashboardPage() {
+  const { t } = useSiteData();
+  const [student, setStudent] = useState<any>(null);
+  const [participations, setParticipations] = useState<StudentParticipationRecord[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const raw = localStorage.getItem('student_info');
+    if (!raw) {
+      window.location.href = '/student/login';
+      return;
+    }
+    const info = JSON.parse(raw);
+    setStudent(info);
+
+    if (info.studentId) {
+      api.getStudentParticipations(info.studentId)
+        .then(res => setParticipations(res))
+        .catch(err => console.error(err))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('student_token');
+    localStorage.removeItem('student_info');
+    window.location.href = '/student/login';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-[68px] flex items-center justify-center bg-[#F9F2E3]">
+        <Loader2 size={36} className="animate-spin text-[#A84A20]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-[#F9F2E3] min-h-screen pt-[68px]">
+      <Helmet>
+        <title>विद्यार्थी डॅशबोर्ड | गडकिल्ले संवर्धन</title>
+      </Helmet>
+
+      {/* Top Header */}
+      <div className="bg-[#1A1008] py-12 text-[#F3E8D0]">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-[#A84A20] text-white flex items-center justify-center font-bold text-2xl border-2 border-[#D4A955]">
+              {student?.fullName ? student.fullName[0].toUpperCase() : 'S'}
+            </div>
+            <div>
+              <h1 className="font-serif text-2xl font-bold">{student?.fullName}</h1>
+              <p className="text-xs text-[rgba(243,232,208,0.7)] flex items-center gap-2 mt-0.5">
+                <span>{student?.email}</span> •{' '}
+                <span className="capitalize">{student?.studentType} Student</span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-all flex items-center gap-2 border border-white/20"
+          >
+            <LogOut size={16} /> बाहेर पडा (Logout)
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-[1200px] mx-auto px-6 py-10 space-y-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-[#E8D5A3] shadow-sm">
+            <span className="text-xs text-[#8F7A66] font-bold block mb-1">सहभाग घेतलेले उपक्रम</span>
+            <span className="font-serif text-3xl font-black text-[#A84A20]">{participations.length}</span>
+          </div>
+          <div className="bg-white p-6 rounded-2xl border border-[#E8D5A3] shadow-sm">
+            <span className="text-xs text-[#8F7A66] font-bold block mb-1">प्राप्त प्रमाणपत्रे</span>
+            <span className="font-serif text-3xl font-black text-[#A84A20]">
+              {participations.filter(p => p.certificateId).length}
+            </span>
+          </div>
+          <div className="bg-white p-6 rounded-2xl border border-[#E8D5A3] shadow-sm">
+            <span className="text-xs text-[#8F7A66] font-bold block mb-1">एकूण गुण (Total Score)</span>
+            <span className="font-serif text-3xl font-black text-[#A84A20]">
+              {participations.reduce((acc, curr) => acc + (curr.score || 0), 0)}
+            </span>
+          </div>
+        </div>
+
+        {/* Participation History */}
+        <div className="bg-white rounded-2xl p-6 border border-[#E8D5A3] shadow-sm">
+          <h2 className="font-serif text-xl font-bold text-[#1A1008] mb-4 flex items-center gap-2">
+            <Award className="text-[#A84A20]" size={20} />
+            स्पर्धा व प्रश्नमंजुषा सहभाग इतिहास (Participation History)
+          </h2>
+
+          {participations.length === 0 ? (
+            <p className="text-xs text-[#8F7A66] py-6 text-center">
+              तुम्ही अद्याप कोणत्याही स्पर्धेत सहभाग घेतलेला नाही. उपलब्ध उपक्रमांमध्ये भाग घ्या!
+            </p>
+          ) : (
+            <div className="divide-y divide-[#F0E6D2]">
+              {participations.map(p => (
+                <div key={p.id} className="py-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-bold text-sm text-[#1A1008]">{p.activityTitle}</h3>
+                    <p className="text-xs text-[#8F7A66] capitalize">प्रकार: {p.activityType}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-sm text-[#A84A20]">
+                      गुण: {p.score} / {p.maxScore}
+                    </span>
+                    {p.certificateId && (
+                      <Link
+                        to="/certificate"
+                        className="block text-[11px] text-emerald-700 font-bold hover:underline"
+                      >
+                        ✓ प्रमाणपत्र पहा
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

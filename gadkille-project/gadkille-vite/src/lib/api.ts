@@ -413,4 +413,295 @@ export const api = {
     request<CertificateData>(`/api/certificates/${encodeURIComponent(certCodeOrName)}`),
   deleteCertificate: (id: string) =>
     request<{ deleted: string }>(`/api/certificates/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Team Members
+  getTeamMembers: () => request<TeamMemberRecord[]>('/api/team-members'),
+  createTeamMember: (payload: Omit<TeamMemberRecord, 'id'>) =>
+    request<TeamMemberRecord>('/api/team-members', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteTeamMember: (id: string) =>
+    request<{ deleted: string }>(`/api/team-members/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Organizations
+  getOrganizations: () => request<OrganizationRecord[]>('/api/organizations'),
+  getOrganization: (id: string) => request<OrganizationRecord>(`/api/organizations/${encodeURIComponent(id)}`),
+  createOrganization: (payload: Omit<OrganizationRecord, 'id'>) =>
+    request<OrganizationRecord>('/api/organizations', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteOrganization: (id: string) =>
+    request<{ deleted: string }>(`/api/organizations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Partner Organizations
+  getPartners: () => request<PartnerOrgRecord[]>('/api/partners'),
+  createPartner: (payload: Omit<PartnerOrgRecord, 'id'>) =>
+    request<PartnerOrgRecord>('/api/partners', { method: 'POST', body: JSON.stringify(payload) }),
+  deletePartner: (id: string) =>
+    request<{ deleted: string }>(`/api/partners/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Students
+  studentRegister: (payload: StudentRegisterPayload) =>
+    request<StudentLoginResponse>('/api/students/register', { method: 'POST', body: JSON.stringify(payload) }),
+  studentLogin: (email: string, password: string) =>
+    request<StudentLoginResponse>('/api/students/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  getStudents: () => request<StudentRecord[]>('/api/students'),
+  getStudent: (id: string) => request<StudentRecord>(`/api/students/${encodeURIComponent(id)}`),
+  deleteStudent: (id: string) =>
+    request<{ deleted: string }>(`/api/students/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  getStudentParticipations: (studentId: string) =>
+    request<StudentParticipationRecord[]>(`/api/students/${encodeURIComponent(studentId)}/participations`),
+  createStudentParticipation: (payload: Omit<StudentParticipationRecord, 'id' | 'completedAt'>) =>
+    request<StudentParticipationRecord>('/api/student-participations', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // Certificate Templates
+  getCertificateTemplates: () => request<CertificateTemplateRecord[]>('/api/certificate-templates'),
+  createCertificateTemplate: (payload: Omit<CertificateTemplateRecord, 'id'>) =>
+    request<CertificateTemplateRecord>('/api/certificate-templates', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteCertificateTemplate: (id: string) =>
+    request<{ deleted: string }>(`/api/certificate-templates/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Education Programs
+  getEducationPrograms: () => request<EducationProgramRecord[]>('/api/education-programs'),
+  createEducationProgram: (payload: Omit<EducationProgramRecord, 'id'>) =>
+    request<EducationProgramRecord>('/api/education-programs', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteEducationProgram: (id: string) =>
+    request<{ deleted: string }>(`/api/education-programs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  // Donation Summary
+  getDonationSummary: () => request<DonationSummaryResponse>('/api/donations/summary'),
+
+  // Dinvishesh (Historical Events)
+  getDinvishesh: (params?: {
+    month?: number;
+    day?: number;
+    year?: number;
+    figure?: string;
+    personality?: string;
+    event_type?: string;
+    verification_status?: string;
+    search?: string;
+    event_date?: string;
+    is_published?: boolean;
+  }) => {
+    const q = new URLSearchParams();
+    if (params?.month) q.append('month', params.month.toString());
+    if (params?.day) q.append('day', params.day.toString());
+    if (params?.year) q.append('year', params.year.toString());
+    if (params?.figure) q.append('figure', params.figure);
+    if (params?.personality) q.append('personality', params.personality);
+    if (params?.event_type) q.append('event_type', params.event_type);
+    if (params?.verification_status) q.append('verification_status', params.verification_status);
+    if (params?.search) q.append('search', params.search);
+    if (params?.event_date) q.append('event_date', params.event_date);
+    if (params?.is_published !== undefined) q.append('is_published', params.is_published ? 'true' : 'false');
+    const queryStr = q.toString() ? `?${q.toString()}` : '';
+    return request<DinvisheshRecord[]>(`/api/dinvishesh${queryStr}`);
+  },
+  getDinvisheshStats: () => request<DinvisheshStatsRecord>('/api/dinvishesh/stats'),
+  createDinvishesh: (payload: any) =>
+    request<DinvisheshRecord>('/api/dinvishesh', { method: 'POST', body: JSON.stringify(payload) }),
+  updateDinvishesh: (id: string, payload: any) =>
+    request<DinvisheshRecord>(`/api/dinvishesh/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteDinvishesh: (id: string) =>
+    request<{ deleted: string }>(`/api/dinvishesh/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
+
+// ============================================================================
+// New Types
+// ============================================================================
+export interface EventSourceItem {
+  id?: string;
+  source_name: string;
+  source_url?: string;
+  source_type?: string;
+  source_description?: string;
+  is_primary?: boolean;
+}
+
+export interface DinvisheshStatsRecord {
+  total_events: number;
+  personality_distribution: Record<string, number>;
+  category_distribution: Record<string, number>;
+  location_distribution: Record<string, number>;
+  year_distribution: Record<string, number>;
+  timeline_milestones: Array<{
+    id: string;
+    year: number;
+    day: number;
+    month: number;
+    title: string;
+    personality: string;
+    location: string;
+    event_type: string;
+    image: string;
+  }>;
+}
+
+export interface DinvisheshRecord {
+  id: string;
+  event_date: string;
+  day: number;
+  month: number;
+  year?: number | null;
+  figure: string;
+  personality?: string;
+  event_type?: string;
+  title: string;
+  title_marathi?: string;
+  title_en?: string;
+  title_english?: string;
+  description: string;
+  description_marathi?: string;
+  description_en?: string;
+  description_english?: string;
+  historical_significance?: string;
+  location?: string;
+  image?: string;
+  image_url?: string;
+  key_figures?: string[];
+  source_name?: string;
+  source_url?: string;
+  source_type?: string;
+  source_description?: string;
+  verification_status?: 'verified' | 'under_review' | 'archived' | string;
+  is_disputed?: boolean;
+  dispute_note?: string;
+  sources?: string;
+  event_sources?: EventSourceItem[];
+  is_published?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TeamMemberRecord {
+  id: string;
+  name: string;
+  nameEn: string;
+  role: string;
+  roleEn: string;
+  photo: string;
+  introduction: string;
+  introductionEn: string;
+  responsibilities: string;
+  responsibilitiesEn: string;
+  contribution: string;
+  contributionEn: string;
+  displayOrder: number;
+  isActive: boolean;
+}
+
+export interface OrganizationRecord {
+  id: string;
+  name: string;
+  nameEn: string;
+  introduction: string;
+  introductionEn: string;
+  activities: string;
+  activitiesEn: string;
+  initiatives: string;
+  initiativesEn: string;
+  achievements: string;
+  achievementsEn: string;
+  image: string;
+  extraImages: string[];
+  contactInfo: string;
+  website: string;
+  isActive: boolean;
+}
+
+export interface PartnerOrgRecord {
+  id: string;
+  name: string;
+  nameEn: string;
+  logo: string;
+  description: string;
+  descriptionEn: string;
+  partnerType: string;
+  partnershipDetails: string;
+  partnershipDetailsEn: string;
+  relatedActivities: string;
+  relatedActivitiesEn: string;
+  website: string;
+  contactInfo: string;
+  isActive: boolean;
+}
+
+export interface StudentRegisterPayload {
+  fullName: string;
+  email: string;
+  phone?: string;
+  password: string;
+  studentType: string;
+  institution?: string;
+  classYear?: string;
+  district?: string;
+}
+
+export interface StudentLoginResponse {
+  token: string;
+  studentId: string;
+  fullName: string;
+  email: string;
+  studentType: string;
+  message: string;
+}
+
+export interface StudentRecord {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  studentType: string;
+  institution: string;
+  classYear: string;
+  district: string;
+  profilePhoto: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface StudentParticipationRecord {
+  id: string;
+  studentId: string;
+  activityType: string;
+  activityTitle: string;
+  score: number;
+  maxScore: number;
+  status: string;
+  certificateId: string;
+  completedAt?: string;
+}
+
+export interface CertificateTemplateRecord {
+  id: string;
+  name: string;
+  designUrl: string;
+  templateType: string;
+  bgColor: string;
+  borderColor: string;
+  titleText: string;
+  subtitleText: string;
+  footerText: string;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface EducationProgramRecord {
+  id: string;
+  title: string;
+  titleEn: string;
+  category: string;
+  description: string;
+  descriptionEn: string;
+  image: string;
+  targetAudience: string;
+  targetAudienceEn: string;
+  schedule: string;
+  status: string;
+  isActive: boolean;
+}
+
+export interface DonationSummaryResponse {
+  totalAmount: number;
+  totalDonors: number;
+  totalDonations: number;
+  recentDonations: DonationRecord[];
+  monthlyData: { month: string; amount: number }[];
+}

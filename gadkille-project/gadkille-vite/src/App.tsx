@@ -21,6 +21,12 @@ const NewsPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: 
 const TransparencyPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.TransparencyPage })));
 const ContactPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.ContactPage })));
 const DonatePage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.DonatePage })));
+const DinvisheshPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.DinvisheshPage })));
+const OrganizationsPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.OrganizationsPage })));
+const OrganizationDetailPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.OrganizationDetailPage })));
+const PartnersPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.PartnersPage })));
+const StudentLoginPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.StudentLoginPage })));
+const StudentDashboardPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.StudentDashboardPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
@@ -56,6 +62,12 @@ export default function App() {
                   <Route path="/transparency" element={<TransparencyPage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/donate" element={<DonatePage />} />
+                  <Route path="/dinvishesh" element={<DinvisheshPage />} />
+                  <Route path="/organizations" element={<OrganizationsPage />} />
+                  <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
+                  <Route path="/partners" element={<PartnersPage />} />
+                  <Route path="/student/login" element={<StudentLoginPage />} />
+                  <Route path="/student/dashboard" element={<StudentDashboardPage />} />
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
