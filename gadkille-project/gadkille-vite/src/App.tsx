@@ -20,13 +20,11 @@ const AboutPage = lazy(() => import('@/pages/AboutPage').then(m => ({ default: m
 const NewsPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.NewsPage })));
 const TransparencyPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.TransparencyPage })));
 const ContactPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.ContactPage })));
-const DonatePage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.DonatePage })));
+const DonatePage = lazy(() => import('@/pages/DonatePage').then(m => ({ default: m.DonatePage })));
 const DinvisheshPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.DinvisheshPage })));
 const OrganizationsPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.OrganizationsPage })));
 const OrganizationDetailPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.OrganizationDetailPage })));
 const PartnersPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.PartnersPage })));
-const StudentLoginPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.StudentLoginPage })));
-const StudentDashboardPage = lazy(() => import('@/pages/PublicPages').then(m => ({ default: m.StudentDashboardPage })));
 const AdminPage = lazy(() => import('@/pages/AdminPage').then(m => ({ default: m.AdminPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
@@ -53,6 +51,7 @@ export default function App() {
                   <Route path="/conservation" element={<ConservationPage />} />
                   <Route path="/events" element={<EventsPage />} />
                   <Route path="/education" element={<EducationPage />} />
+                  <Route path="/quiz" element={<EducationPage />} />
                   <Route path="/volunteer" element={<VolunteerPage />} />
                   <Route path="/certificate" element={<CertificatePage />} />
                   <Route path="/gallery" element={<GalleryPage />} />
@@ -66,8 +65,6 @@ export default function App() {
                   <Route path="/organizations" element={<OrganizationsPage />} />
                   <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
                   <Route path="/partners" element={<PartnersPage />} />
-                  <Route path="/student/login" element={<StudentLoginPage />} />
-                  <Route path="/student/dashboard" element={<StudentDashboardPage />} />
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

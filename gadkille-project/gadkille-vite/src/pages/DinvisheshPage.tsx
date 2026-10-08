@@ -468,6 +468,34 @@ export function DinvisheshPage() {
 
       {/* 🌟 3. MAIN INTERACTIVE WORKSPACE */}
       <div id="dinvishesh-interactive-workspace" className="max-w-[1240px] mx-auto px-4 sm:px-6 py-10">
+        {/* Admin Quick Action Banner */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#1a1f2e] via-[#202738] to-[#1a1f2e] border border-amber-500/30 shadow-lg flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#A84A20]/30 border border-[#D4A955]/40 flex items-center justify-center text-lg">
+              🚩
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <span>शिवसाम्राज्याचे दिनविशेष व्यवस्थापन (Admin Control)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
+                  {allEvents.length} एकूण ऐतिहासिक नोंदी
+                </span>
+              </div>
+              <div className="text-[11px] text-white/50">
+                ॲडमिन डॅशबोर्डवरून सर्व प्रसंग जोडा, संपादित करा, प्रकाशित/अप्रकाशित करा किंवा हटवा.
+              </div>
+            </div>
+          </div>
+
+          <a
+            href="/admin"
+            className="px-4 py-2 rounded-xl bg-[#A84A20] hover:bg-[#c15a2a] text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 shadow-md"
+          >
+            <ShieldCheck size={14} />
+            <span>दिनविशेष ॲडमिन डॅशबोर्ड उघडा ↗</span>
+          </a>
+        </div>
+
         {/* Navigation Tabs (Calendar View / Historical Timeline / Data Visualizations) */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-4 border-b border-[#E8D5A3]">
           <div className="flex items-center gap-2">
@@ -1280,6 +1308,23 @@ export function DinvisheshPage() {
                     <ExternalLink size={13} />
                   </a>
                 )}
+              </div>
+
+              {/* Admin Direct Edit Action */}
+              <div className="pt-3 border-t border-[#E8D5A3] flex items-center justify-between flex-wrap gap-2">
+                <span className="text-[11px] text-[#8F7A66] font-mono">
+                  नोंद आयडी: {selectedModalEvent.id}
+                </span>
+                <a
+                  href="/admin"
+                  onClick={() => {
+                    localStorage.setItem('gsp_edit_din_id', selectedModalEvent.id);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#1a1f2e] hover:bg-[#252c40] text-amber-300 hover:text-white text-xs font-bold inline-flex items-center gap-2 border border-amber-500/30 shadow-md transition-all"
+                >
+                  <ShieldCheck size={14} className="text-[#D4A955]" />
+                  <span>✏️ हा प्रसंग ॲडमिन पॅनेलमध्ये संपादित करा (Edit in Admin)</span>
+                </a>
               </div>
             </div>
           </div>

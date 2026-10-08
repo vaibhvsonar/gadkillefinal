@@ -1,0 +1,10 @@
+{
+  "name": "gadkille-root",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm --prefix gadkille-project/gadkille-vite run dev",
+    "build": "npm --prefix gadkille-project/gadkille-vite run build",
+    "preview": "npm --prefix gadkille-project/gadkille-vite run preview"
+  }
+}

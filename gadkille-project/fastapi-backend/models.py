@@ -235,6 +235,41 @@ class DonationCreate(BaseModel):
     paymentMethod: str = Field("UPI", max_length=50)
     transactionRef: Optional[str] = Field(None, max_length=100)
     panNumber: Optional[str] = Field(None, max_length=20)
+    displayNamePublic: bool = True
+    displayAmountPublic: bool = False
+
+class DonationAdminCreate(BaseModel):
+    donorName: str = Field(..., min_length=1, max_length=150)
+    amount: float = Field(..., gt=0)
+    donationDate: Optional[str] = None
+    purpose: str = Field("सामान्य संवर्धन निधी", max_length=150)
+    paymentMethod: str = Field("UPI", max_length=50)
+    transactionRef: Optional[str] = Field(None, max_length=100)
+    phonePrivate: Optional[str] = Field(None, max_length=30)
+    emailPrivate: Optional[EmailStr] = None
+    paymentStatus: str = Field("completed", max_length=50)
+    verificationStatus: str = Field("approved", max_length=50) # 'pending', 'approved', 'rejected'
+    displayNamePublic: bool = True
+    displayAmountPublic: bool = False
+    adminRemarks: Optional[str] = ""
+    isPublished: bool = True
+
+class DonationAdminUpdate(BaseModel):
+    donorName: Optional[str] = None
+    amount: Optional[float] = None
+    donationDate: Optional[str] = None
+    purpose: Optional[str] = None
+    paymentMethod: Optional[str] = None
+    transactionRef: Optional[str] = None
+    phonePrivate: Optional[str] = None
+    emailPrivate: Optional[str] = None
+    paymentStatus: Optional[str] = None
+    verificationStatus: Optional[str] = None # 'pending', 'approved', 'rejected'
+    displayNamePublic: Optional[bool] = None
+    displayAmountPublic: Optional[bool] = None
+    adminRemarks: Optional[str] = None
+    verifiedBy: Optional[str] = None
+    isPublished: Optional[bool] = None
 
 class DonationResponse(BaseModel):
     id: UUID
@@ -242,16 +277,58 @@ class DonationResponse(BaseModel):
     message: str
 
 class DonationRecord(BaseModel):
-    id: UUID
+    id: str
     donor_name: str
-    email: Optional[str] = None
-    phone: Optional[str] = None
+    donorName: Optional[str] = None
+    donation_amount: float
     amount: float
-    project_name: str
-    payment_method: str
+    donation_date: Optional[str] = None
+    donationDate: Optional[str] = None
+    purpose: str = "सामान्य संवर्धन निधी"
+    project_name: Optional[str] = None
+    projectName: Optional[str] = None
+    payment_method: str = "UPI"
+    paymentMethod: Optional[str] = None
     transaction_ref: Optional[str] = None
-    status: str
-    created_at: datetime
+    transactionRef: Optional[str] = None
+    transaction_reference: Optional[str] = None
+    phone_private: Optional[str] = None
+    phone: Optional[str] = None
+    email_private: Optional[str] = None
+    email: Optional[str] = None
+    payment_status: str = "completed"
+    paymentStatus: Optional[str] = None
+    verification_status: str = "pending" # 'pending', 'approved', 'rejected'
+    verificationStatus: Optional[str] = None
+    display_name_public: bool = True
+    displayNamePublic: Optional[bool] = None
+    display_amount_public: bool = False
+    displayAmountPublic: Optional[bool] = None
+    admin_remarks: Optional[str] = ""
+    adminRemarks: Optional[str] = None
+    verified_by: Optional[str] = ""
+    verifiedBy: Optional[str] = None
+    verified_at: Optional[str] = None
+    verifiedAt: Optional[str] = None
+    is_published: bool = False
+    isPublished: Optional[bool] = None
+    created_at: Optional[str] = None
+    createdAt: Optional[str] = None
+    updated_at: Optional[str] = None
+    updatedAt: Optional[str] = None
+
+class PublicDonorRecord(BaseModel):
+    """Sanitized public model: strictly contains NO private contact or transaction details."""
+    id: str
+    donor_name: str
+    donorName: Optional[str] = None
+    purpose: str = "सामान्य संवर्धन निधी"
+    donation_date: Optional[str] = None
+    donationDate: Optional[str] = None
+    display_amount_public: bool = False
+    displayAmountPublic: Optional[bool] = None
+    donation_amount: Optional[float] = None
+    created_at: Optional[str] = None
 
 # ============================================================================
 # 9. Event Registrations Schemas
@@ -317,6 +394,7 @@ class AdminStatsResponse(BaseModel):
     totalPartnerOrgsCount: int = 0
     totalEducationProgramsCount: int = 0
     totalCertificateTemplatesCount: int = 0
+    totalManogatCount: int = 0
     recentDonations: List[DonationRecord]
     recentVolunteers: List[VolunteerRecord]
     recentContacts: List[ContactRecord]
@@ -633,6 +711,63 @@ class DinvisheshRecord(BaseModel):
     is_published: bool = True
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+# ============================================================================
+# 21. Member Manogat (मनोगत) Schemas
+# ============================================================================
+class ManogatCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=150)
+    nameEn: str = ""
+    designation: str = Field(..., min_length=1, max_length=150)
+    designationEn: str = ""
+    photo: str = ""
+    shortManogat: str = Field(..., min_length=1)
+    shortManogatEn: str = ""
+    detailedManogat: str = ""
+    detailedManogatEn: str = ""
+    displayOrder: int = 0
+    isPublished: bool = True
+
+class ManogatUpdate(BaseModel):
+    name: Optional[str] = None
+    nameEn: Optional[str] = None
+    designation: Optional[str] = None
+    designationEn: Optional[str] = None
+    photo: Optional[str] = None
+    shortManogat: Optional[str] = None
+    shortManogatEn: Optional[str] = None
+    detailedManogat: Optional[str] = None
+    detailedManogatEn: Optional[str] = None
+    displayOrder: Optional[int] = None
+    isPublished: Optional[bool] = None
+
+class ManogatRecord(BaseModel):
+    id: str
+    name: str
+    nameEn: str = ""
+    name_en: Optional[str] = None
+    designation: str
+    designationEn: str = ""
+    designation_en: Optional[str] = None
+    photo: str = ""
+    shortManogat: str
+    short_manogat: Optional[str] = None
+    shortManogatEn: str = ""
+    short_manogat_en: Optional[str] = None
+    detailedManogat: str = ""
+    detailed_manogat: Optional[str] = None
+    detailedManogatEn: str = ""
+    detailed_manogat_en: Optional[str] = None
+    displayOrder: int = 0
+    display_order: Optional[int] = None
+    isPublished: bool = True
+    is_published: Optional[bool] = None
+    createdAt: Optional[str] = None
+    created_at: Optional[str] = None
+    updatedAt: Optional[str] = None
+    updated_at: Optional[str] = None
+
 
 
 

@@ -130,10 +130,12 @@ export const MR_TO_EN_MAP: Record<string, string> = {
   'नोंदणी पूर्ण': 'Registration Full',
   'नोंदणी सुरू': 'Registration Open',
 
-  // Education Page
+  // Education / Quiz Page
+  'प्रश्नमंजुषा': 'History Quiz',
   'शैक्षणिक उपक्रम': 'Educational Initiatives',
   'इतिहास शिक्षण व वारसा जागृती': 'History Education & Heritage Awareness',
   'मराठा इतिहास प्रश्नमंजुषा': 'Maratha History Quiz',
+  '॥ आयुष्याचा एकचं प्रण, गडकिल्ले संवर्धन ॥': '॥ Ayushyacha Ekach Pran, Gadkille Sanvardhan ॥',
 
   // Volunteer Page
   'आमच्यासोबत या': 'Join Us',

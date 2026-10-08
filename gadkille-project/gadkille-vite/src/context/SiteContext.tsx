@@ -7,6 +7,9 @@ import {
   type ConservationProject,
   type NewsArticle,
   type GalleryItem,
+  type ManogatRecord,
+  type PublicDonorRecord,
+  DEFAULT_MANOGATS,
 } from '@/lib/api';
 import { applyLanguageToDOM, type Language } from '@/lib/i18n';
 
@@ -42,6 +45,8 @@ interface SiteContextValue {
   projects: ConservationProject[];
   news: NewsArticle[];
   gallery: GalleryItem[];
+  manogats: ManogatRecord[];
+  publicDonors: PublicDonorRecord[];
   loading: boolean;
   backendConnected: boolean;
   refreshAll: () => Promise<void>;
@@ -58,6 +63,8 @@ const SiteContext = createContext<SiteContextValue>({
   projects: [],
   news: [],
   gallery: [],
+  manogats: DEFAULT_MANOGATS,
+  publicDonors: [],
   loading: true,
   backendConnected: false,
   refreshAll: async () => {},
@@ -74,6 +81,8 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<ConservationProject[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [manogats, setManogats] = useState<ManogatRecord[]>(DEFAULT_MANOGATS);
+  const [publicDonors, setPublicDonors] = useState<PublicDonorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [backendConnected, setBackendConnected] = useState(false);
 
@@ -99,13 +108,15 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const refreshAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, fRes, eRes, pRes, nRes, gRes] = await Promise.allSettled([
+      const [sRes, fRes, eRes, pRes, nRes, gRes, mRes, dRes] = await Promise.allSettled([
         api.getSettings(),
         api.getForts(),
         api.getEvents(),
         api.getProjects(),
         api.getNews(),
         api.getGallery(),
+        api.getManogats(),
+        api.getPublicDonors(),
       ]);
 
       let anySuccess = false;
@@ -131,6 +142,14 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
       }
       if (gRes.status === 'fulfilled') {
         setGallery(gRes.value);
+        anySuccess = true;
+      }
+      if (mRes.status === 'fulfilled' && Array.isArray(mRes.value) && mRes.value.length > 0) {
+        setManogats(mRes.value);
+        anySuccess = true;
+      }
+      if (dRes.status === 'fulfilled' && Array.isArray(dRes.value)) {
+        setPublicDonors(dRes.value);
         anySuccess = true;
       }
       setBackendConnected(anySuccess);
@@ -177,6 +196,8 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
         projects,
         news,
         gallery,
+        manogats,
+        publicDonors,
         loading,
         backendConnected,
         refreshAll,

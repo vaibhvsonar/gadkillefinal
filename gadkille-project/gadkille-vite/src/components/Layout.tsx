@@ -34,7 +34,7 @@ const navGroups: NavGroup[] = [
     children: [
       { href: '/conservation', labelMr: 'संवर्धन प्रकल्प', labelEn: 'Conservation' },
       { href: '/events', labelMr: 'कार्यक्रम व मोहिमा', labelEn: 'Events & Drives' },
-      { href: '/education', labelMr: 'शिक्षण व क्विझ', labelEn: 'Education & Quiz' },
+      { href: '/education', labelMr: 'प्रश्नमंजुषा', labelEn: 'Quiz' },
       { href: '/news', labelMr: 'बातम्या व लेख', labelEn: 'News & Articles' },
     ],
   },
@@ -43,7 +43,6 @@ const navGroups: NavGroup[] = [
     labelMr: 'सहभाग',
     labelEn: 'Get Involved',
     children: [
-      { href: '/student/login', labelMr: 'विद्यार्थी लॉगिन', labelEn: 'Student Portal' },
       { href: '/volunteer', labelMr: 'स्वयंसेवक बना', labelEn: 'Volunteer' },
       { href: '/certificate', labelMr: 'प्रमाणपत्र', labelEn: 'Certificate' },
       { href: '/transparency', labelMr: 'आर्थिक पारदर्शकता', labelEn: 'Transparency' },
@@ -69,7 +68,6 @@ const footerColumns = [
     links: [
       { href: '/conservation', labelMr: 'चालू प्रकल्प', labelEn: 'Active Projects' },
       { href: '/events', labelMr: 'कार्यक्रम', labelEn: 'Events & Drives' },
-      { href: '/student/login', labelMr: 'विद्यार्थी पोर्टल', labelEn: 'Student Portal' },
       { href: '/volunteer', labelMr: 'स्वयंसेवक बना', labelEn: 'Become a Volunteer' },
     ],
   },
@@ -167,10 +165,10 @@ export function Navbar() {
                   ? 'Gadkille Sanvardhan'
                   : settings.nameMarathi || 'गड-किल्ले संवर्धन प्रतिष्ठान'}
               </div>
-              <div className="text-[10px] font-bold tracking-[0.08em] uppercase whitespace-nowrap text-[#C1521F]">
+              <div className="text-[10px] sm:text-[11px] font-bold tracking-[0.02em] whitespace-nowrap text-[#C1521F]">
                 {lang === 'en'
-                  ? 'Pratishthan · Est. 2011'
-                  : `${settings.state || 'महाराष्ट्र राज्य'} · स्थापना ${settings.founded || '२०११'}`}
+                  ? '॥ Ayushyacha Ekach Pran, Gadkille Sanvardhan ॥'
+                  : '॥ आयुष्याचा एकचं प्रण, गडकिल्ले संवर्धन ॥'}
               </div>
             </div>
           </Link>
@@ -500,8 +498,10 @@ export function Footer() {
                 <div className="font-serif font-bold text-[#F3E8D0] text-base leading-tight">
                   {lang === 'en' ? settings.nameEnglish : settings.nameMarathi}
                 </div>
-                <div className="text-[#D4A955] text-[11px] tracking-widest font-cinzel">
-                  {lang === 'en' ? 'Maharashtra State' : settings.state}
+                <div className="text-[#D4A955] text-[11px] font-medium tracking-wide">
+                  {lang === 'en'
+                    ? '॥ Ayushyacha Ekach Pran, Gadkille Sanvardhan ॥'
+                    : '॥ आयुष्याचा एकचं प्रण, गडकिल्ले संवर्धन ॥'}
                 </div>
               </div>
             </Link>

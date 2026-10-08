@@ -41,7 +41,10 @@ class LocalSupabaseTableQuery:
     before SUPABASE_KEY is pasted into .env.
     """
     JSON_COLS = {"features", "interests", "key_figures", "event_sources", "focus_areas", "categories"}
-    BOOL_COLS = {"is_featured", "is_spotlight", "is_published", "is_disputed", "is_primary", "is_active", "is_default"}
+    BOOL_COLS = {
+        "is_featured", "is_spotlight", "is_published", "is_disputed", "is_primary",
+        "is_active", "is_default", "display_name_public", "display_amount_public"
+    }
 
     def __init__(self, conn: sqlite3.Connection, table_name: str):
         self._conn = conn
@@ -487,15 +490,30 @@ CREATE TABLE IF NOT EXISTS contacts (
 CREATE TABLE IF NOT EXISTS donations (
     id TEXT PRIMARY KEY,
     donor_name TEXT NOT NULL DEFAULT 'अनाम (Anonymous)',
-    email TEXT,
-    phone TEXT,
-    amount REAL NOT NULL,
+    donation_amount REAL NOT NULL DEFAULT 0,
+    amount REAL NOT NULL DEFAULT 0,
+    donation_date TEXT NOT NULL DEFAULT (date('now')),
+    purpose TEXT NOT NULL DEFAULT 'सामान्य संवर्धन निधी',
     project_name TEXT NOT NULL DEFAULT 'सामान्य संवर्धन निधी',
     payment_method TEXT NOT NULL DEFAULT 'UPI',
-    transaction_ref TEXT,
-    pan_number TEXT,
+    transaction_ref TEXT DEFAULT '',
+    transaction_reference TEXT DEFAULT '',
+    pan_number TEXT DEFAULT '',
+    phone_private TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    email_private TEXT DEFAULT '',
+    email TEXT DEFAULT '',
+    payment_status TEXT NOT NULL DEFAULT 'completed',
     status TEXT NOT NULL DEFAULT 'completed',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    verification_status TEXT NOT NULL DEFAULT 'pending',
+    display_name_public INTEGER NOT NULL DEFAULT 1,
+    display_amount_public INTEGER NOT NULL DEFAULT 0,
+    admin_remarks TEXT DEFAULT '',
+    verified_by TEXT DEFAULT '',
+    verified_at TEXT DEFAULT '',
+    is_published INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS event_registrations (
@@ -682,6 +700,23 @@ CREATE TABLE IF NOT EXISTS education_programs (
     status TEXT DEFAULT 'active',
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS member_manogat (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    name_en TEXT DEFAULT '',
+    designation TEXT NOT NULL DEFAULT '',
+    designation_en TEXT DEFAULT '',
+    photo TEXT DEFAULT '',
+    short_manogat TEXT NOT NULL DEFAULT '',
+    short_manogat_en TEXT DEFAULT '',
+    detailed_manogat TEXT DEFAULT '',
+    detailed_manogat_en TEXT DEFAULT '',
+    display_order INTEGER NOT NULL DEFAULT 0,
+    is_published INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """
 
@@ -1069,6 +1104,47 @@ async def init_db() -> None:
         run_all_imports()
     except Exception as e:
         print(f"[WARN] Dinvishesh seed note: {e}")
+
+    # Dynamic Migration: ensure all new columns exist in donations table
+    cursor.execute("PRAGMA table_info(donations)")
+    don_cols = {row[1] for row in cursor.fetchall()}
+    don_columns_to_add = [
+        ("donation_amount", "REAL DEFAULT 0"),
+        ("donation_date", "TEXT DEFAULT ''"),
+        ("purpose", "TEXT DEFAULT 'सामान्य संवर्धन निधी'"),
+        ("transaction_reference", "TEXT DEFAULT ''"),
+        ("phone_private", "TEXT DEFAULT ''"),
+        ("email_private", "TEXT DEFAULT ''"),
+        ("payment_status", "TEXT DEFAULT 'completed'"),
+        ("verification_status", "TEXT DEFAULT 'pending'"),
+        ("display_name_public", "INTEGER DEFAULT 1"),
+        ("display_amount_public", "INTEGER DEFAULT 0"),
+        ("admin_remarks", "TEXT DEFAULT ''"),
+        ("verified_by", "TEXT DEFAULT ''"),
+        ("verified_at", "TEXT DEFAULT ''"),
+        ("is_published", "INTEGER DEFAULT 0"),
+        ("updated_at", "TEXT DEFAULT ''")
+    ]
+    for col_name, col_def in don_columns_to_add:
+        if col_name not in don_cols:
+            try:
+                cursor.execute(f"ALTER TABLE donations ADD COLUMN {col_name} {col_def}")
+            except Exception as e:
+                print(f"[WARN] Could not add column {col_name} to donations: {e}")
+
+    # Synchronize legacy columns with new standard columns
+    cursor.execute("""
+        UPDATE donations
+        SET donation_amount = CASE WHEN (donation_amount IS NULL OR donation_amount = 0) AND amount > 0 THEN amount ELSE donation_amount END,
+            amount = CASE WHEN (amount IS NULL OR amount = 0) AND donation_amount > 0 THEN donation_amount ELSE amount END,
+            purpose = CASE WHEN purpose IS NULL OR purpose = '' THEN COALESCE(project_name, 'सामान्य संवर्धन निधी') ELSE purpose END,
+            project_name = CASE WHEN project_name IS NULL OR project_name = '' THEN purpose ELSE project_name END,
+            transaction_reference = CASE WHEN transaction_reference IS NULL OR transaction_reference = '' THEN transaction_ref ELSE transaction_reference END,
+            transaction_ref = CASE WHEN transaction_ref IS NULL OR transaction_ref = '' THEN transaction_reference ELSE transaction_ref END,
+            phone_private = CASE WHEN phone_private IS NULL OR phone_private = '' THEN phone ELSE phone_private END,
+            email_private = CASE WHEN email_private IS NULL OR email_private = '' THEN email ELSE email_private END,
+            donation_date = CASE WHEN donation_date IS NULL OR donation_date = '' THEN SUBSTR(COALESCE(created_at, date('now')), 1, 10) ELSE donation_date END
+    """)
 
     _local_conn.commit()
 

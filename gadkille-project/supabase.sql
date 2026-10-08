@@ -173,17 +173,32 @@ CREATE TABLE IF NOT EXISTS public.contacts (
 -- 8. Donations Table (देणगी व्यवहार)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.donations (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    donor_name          VARCHAR(150) NOT NULL DEFAULT 'अनाम (Anonymous)',
-    email               VARCHAR(255),
-    phone               VARCHAR(30),
-    amount              NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
-    project_name        VARCHAR(150) NOT NULL DEFAULT 'सामान्य संवर्धन निधी',
-    payment_method      VARCHAR(50)  NOT NULL DEFAULT 'UPI',
-    transaction_ref     VARCHAR(100),
-    pan_number          VARCHAR(20),
-    status              VARCHAR(30)  NOT NULL DEFAULT 'completed',
-    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    id                      TEXT PRIMARY KEY,
+    donor_name              VARCHAR(150) NOT NULL DEFAULT 'अनाम (Anonymous)',
+    donation_amount         NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    amount                  NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    donation_date           VARCHAR(20) NOT NULL DEFAULT CURRENT_DATE::text,
+    purpose                 VARCHAR(200) NOT NULL DEFAULT 'सामान्य संवर्धन निधी',
+    project_name            VARCHAR(200) NOT NULL DEFAULT 'सामान्य संवर्धन निधी',
+    payment_method          VARCHAR(50)  NOT NULL DEFAULT 'UPI',
+    transaction_ref         VARCHAR(100) DEFAULT '',
+    transaction_reference   VARCHAR(100) DEFAULT '',
+    pan_number              VARCHAR(20) DEFAULT '',
+    phone_private           VARCHAR(30) DEFAULT '',
+    phone                   VARCHAR(30) DEFAULT '',
+    email_private           VARCHAR(255) DEFAULT '',
+    email                   VARCHAR(255) DEFAULT '',
+    payment_status          VARCHAR(30)  NOT NULL DEFAULT 'completed',
+    status                  VARCHAR(30)  NOT NULL DEFAULT 'completed',
+    verification_status     VARCHAR(30)  NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+    display_name_public     BOOLEAN NOT NULL DEFAULT TRUE,
+    display_amount_public   BOOLEAN NOT NULL DEFAULT FALSE,
+    admin_remarks           TEXT DEFAULT '',
+    verified_by             VARCHAR(100) DEFAULT '',
+    verified_at             TIMESTAMPTZ,
+    is_published            BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ----------------------------------------------------------------------------
@@ -266,3 +281,24 @@ CREATE TABLE IF NOT EXISTS public.event_sources (
     is_primary          INT DEFAULT 0,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ----------------------------------------------------------------------------
+-- 13. Member Manogat Table (कार्यरत सदस्यांचे मनोगत)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.member_manogat (
+    id                  VARCHAR(100) PRIMARY KEY,
+    name                VARCHAR(150) NOT NULL,
+    name_en             VARCHAR(150) DEFAULT '',
+    designation         VARCHAR(150) NOT NULL DEFAULT '',
+    designation_en      VARCHAR(150) DEFAULT '',
+    photo               TEXT         DEFAULT '',
+    short_manogat       TEXT         NOT NULL DEFAULT '',
+    short_manogat_en    TEXT         DEFAULT '',
+    detailed_manogat    TEXT         DEFAULT '',
+    detailed_manogat_en TEXT         DEFAULT '',
+    display_order       INT          NOT NULL DEFAULT 0,
+    is_published        INT          NOT NULL DEFAULT 1,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+

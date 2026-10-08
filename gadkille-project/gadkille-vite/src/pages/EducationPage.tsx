@@ -254,20 +254,20 @@ export function EducationPage() {
   return (
     <div className="bg-[#F9F2E3] min-h-screen pt-[68px]">
       <Helmet>
-        <title>{t('शिक्षण केंद्र', 'Education Center')} | Gadkille Savardhan</title>
+        <title>{t('प्रश्नमंजुषा | गडकिल्ले संवर्धन', 'History Quiz | Gadkille Sanvardhan')}</title>
       </Helmet>
       
       <div className="bg-gradient-to-br from-[#1A1008] to-[#1e3020] py-20 text-center">
         <div className="max-w-2xl mx-auto px-6">
           <div className="inline-flex items-center gap-2 mb-4 font-cinzel text-xs uppercase tracking-widest text-[#D4A955]">
-            <span className="w-6 h-px bg-[#B58A45]" /> 📚 {t('शिक्षण व अभ्यास', 'Education & Study')}{' '}
+            <span className="w-6 h-px bg-[#B58A45]" /> 📚 {t('इतिहास प्रश्नमंजुषा व ज्ञान केंद्र', 'History Quiz & Study Center')}{' '}
             <span className="w-6 h-px bg-[#B58A45]" />
           </div>
           <h1 className="font-serif text-4xl sm:text-5xl font-black text-[#F3E8D0] mb-4">
-            {t('शिक्षण केंद्र', 'Education Center')}
+            {t('प्रश्नमंजुषा', 'History Quiz')}
           </h1>
-          <p className="text-[rgba(243,232,208,0.7)] max-w-lg mx-auto">
-            {t('मराठा इतिहास, किल्ले वास्तुकला आणि संवर्धन विज्ञान — सखोल शिक्षण आणि इतिहास प्रश्नमंजुषा.', 'Maratha history, fort architecture, and conservation science — in-depth education and history quiz.')}
+          <p className="text-[rgba(243,232,208,0.8)] max-w-lg mx-auto">
+            {t('मराठा इतिहास, किल्ले वास्तुकला आणि संवर्धन विज्ञान — सखोल अभ्यास आणि ऑनलाइन इतिहास प्रश्नमंजुषा.', 'Maratha history, fort architecture, and conservation science — in-depth study and history quiz.')}
           </p>
         </div>
       </div>
@@ -352,7 +352,7 @@ export function EducationPage() {
           <div className="bg-white rounded-3xl overflow-hidden border border-[#E8D5A3] shadow-lg max-w-2xl mx-auto">
             <div className="bg-gradient-to-r from-[#1e3020] to-[#2e4a30] p-6 text-white">
               <div className="flex items-center justify-between">
-                <h3 className="font-serif text-xl font-bold">{t('मराठा इतिहास क्विझ', 'Maratha History Quiz')}</h3>
+                <h3 className="font-serif text-xl font-bold">{t('मराठा इतिहास प्रश्नमंजुषा', 'Maratha History Quiz')}</h3>
                 {!quizDone && (
                   <span className="text-xs bg-[rgba(255,255,255,0.15)] px-3 py-1 rounded-full">
                     {t('प्रश्न', 'Question')} {qIdx + 1} / {QUIZ_QUESTIONS.length}

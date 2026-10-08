@@ -3,6 +3,7 @@ import random
 import base64
 import re
 import hashlib
+import urllib.request
 from contextlib import asynccontextmanager
 from typing import List, Any, Optional
 from datetime import date, datetime
@@ -23,7 +24,7 @@ from models import (
     ImageUploadRequest, ImageUploadResponse,
     VolunteerCreate, VolunteerResponse, VolunteerRecord,
     ContactCreate, ContactResponse, ContactRecord,
-    DonationCreate, DonationResponse, DonationRecord,
+    DonationCreate, DonationAdminCreate, DonationAdminUpdate, DonationResponse, DonationRecord, PublicDonorRecord,
     EventRegistrationCreate, EventRegistrationResponse, EventRegistrationRecord,
     CertificateCreate, CertificateRecord,
     AdminStatsResponse,
@@ -36,6 +37,7 @@ from models import (
     EducationProgramCreate, EducationProgramRecord,
     DonationSummaryResponse,
     DinvisheshCreate, DinvisheshRecord,
+    ManogatCreate, ManogatUpdate, ManogatRecord,
 )
 
 def _hash_password(password: str) -> str:
@@ -290,6 +292,82 @@ async def create_or_update_fort(req: FortSchema, supabase: Any = Depends(get_sup
 async def delete_fort(fort_id: str, supabase: Any = Depends(get_supabase)):
     supabase.table("forts").delete().eq("id", fort_id).execute()
     return {"deleted": fort_id}
+
+
+def extract_coords_from_url_or_text(text: str) -> Optional[dict]:
+    if not text:
+        return None
+    # 1. Standard @lat,lng format
+    m = re.search(r"@(-?\d+\.\d+),(-?\d+\.\d+)", text)
+    if m:
+        return {"latitude": float(m.group(1)), "longitude": float(m.group(2))}
+    # 2. Embed / place parameters: !3d(lat)!4d(lng)
+    m = re.search(r"!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)", text)
+    if m:
+        return {"latitude": float(m.group(1)), "longitude": float(m.group(2))}
+    # 3. !2d(lng)!3d(lat)
+    m = re.search(r"!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)", text)
+    if m:
+        return {"latitude": float(m.group(2)), "longitude": float(m.group(1))}
+    # 4. Query params ?q=lat,lng or ll=lat,lng or query=lat,lng or daddr=lat,lng
+    m = re.search(r"[?&](?:q|query|ll|daddr|saddr|center)=(-?\d+\.\d+)[,%20]+(-?\d+\.\d+)", text, re.IGNORECASE)
+    if m:
+        return {"latitude": float(m.group(1)), "longitude": float(m.group(2))}
+    # 5. DMS coordinates format
+    m = re.search(r"(\d+)°(\d+)'([\d.]+)\"?([NS])[,\s]+(\d+)°(\d+)'([\d.]+)\"?([EW])", text, re.IGNORECASE)
+    if m:
+        lat = int(m.group(1)) + int(m.group(2)) / 60.0 + float(m.group(3)) / 3600.0
+        if m.group(4).upper() == "S":
+            lat = -lat
+        lng = int(m.group(5)) + int(m.group(6)) / 60.0 + float(m.group(7)) / 3600.0
+        if m.group(8).upper() == "W":
+            lng = -lng
+        return {"latitude": round(lat, 6), "longitude": round(lng, 6)}
+    # 6. Raw coordinate numbers
+    m = re.search(r"(-?\d{1,2}\.\d{4,})[,\s/]+(-?\d{1,3}\.\d{4,})", text)
+    if m:
+        lat, lng = float(m.group(1)), float(m.group(2))
+        if -90 <= lat <= 90 and -180 <= lng <= 180:
+            return {"latitude": lat, "longitude": lng}
+    return None
+
+
+@app.post("/api/resolve-maps-url", tags=["Forts"])
+async def resolve_maps_url(payload: dict):
+    raw_url = payload.get("url", "").strip()
+    if not raw_url:
+        raise HTTPException(status_code=400, detail="Google Maps URL किंवा मजकूर आवश्यक आहे.")
+    
+    # Check if we can extract directly without web request
+    direct = extract_coords_from_url_or_text(raw_url)
+    if direct:
+        return {**direct, "resolvedUrl": raw_url}
+
+    # If it's a web URL (e.g. maps.app.goo.gl shortlink), follow redirects
+    if raw_url.startswith("http://") or raw_url.startswith("https://"):
+        try:
+            req = urllib.request.Request(
+                raw_url,
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            )
+            with urllib.request.urlopen(req, timeout=5) as response:
+                final_url = response.geturl()
+                content = response.read(20000).decode("utf-8", errors="ignore")
+                
+                coords = extract_coords_from_url_or_text(final_url) or extract_coords_from_url_or_text(content)
+                if coords:
+                    return {**coords, "resolvedUrl": final_url}
+        except Exception:
+            pass
+
+    coords = extract_coords_from_url_or_text(raw_url)
+    if coords:
+        return {**coords, "resolvedUrl": raw_url}
+        
+    raise HTTPException(
+        status_code=422,
+        detail="दिलेल्या Google Maps लिंक किंवा मजकुरामधून अक्षांश/रेखांश (Coordinates) सापडले नाहीत. कृपया योग्य लिंक किंवा Coordinates तपासा."
+    )
 
 
 # ============================================================================
@@ -632,54 +710,303 @@ async def delete_contact(contact_id: str, supabase: Any = Depends(get_supabase))
 
 
 # ============================================================================
-# 8. Donations API
+# 8. Donations & Verified Donors API
 # ============================================================================
+def _format_donation_record(row: dict) -> DonationRecord:
+    raw_amount = float(row.get("donation_amount") or row.get("amount") or 0.0)
+    raw_purpose = row.get("purpose") or row.get("project_name") or "सामान्य संवर्धन निधी"
+    raw_tx = row.get("transaction_reference") or row.get("transaction_ref") or ""
+    raw_phone = row.get("phone_private") or row.get("phone") or ""
+    raw_email = row.get("email_private") or row.get("email") or ""
+    raw_status = row.get("payment_status") or row.get("status") or "completed"
+    raw_verif = row.get("verification_status") or "pending"
+    raw_name_pub = bool(row.get("display_name_public", 1))
+    raw_amt_pub = bool(row.get("display_amount_public", 0))
+    raw_pub = bool(row.get("is_published", 0))
+
+    return DonationRecord(
+        id=str(row["id"]),
+        donor_name=row.get("donor_name") or "अनाम (Anonymous)",
+        donorName=row.get("donor_name") or "अनाम (Anonymous)",
+        donation_amount=raw_amount,
+        amount=raw_amount,
+        donation_date=row.get("donation_date") or (row.get("created_at")[:10] if row.get("created_at") else ""),
+        donationDate=row.get("donation_date") or (row.get("created_at")[:10] if row.get("created_at") else ""),
+        purpose=raw_purpose,
+        project_name=raw_purpose,
+        projectName=raw_purpose,
+        payment_method=row.get("payment_method") or "UPI",
+        paymentMethod=row.get("payment_method") or "UPI",
+        transaction_ref=raw_tx,
+        transactionRef=raw_tx,
+        transaction_reference=raw_tx,
+        phone_private=raw_phone,
+        phone=raw_phone,
+        email_private=raw_email,
+        email=raw_email,
+        payment_status=raw_status,
+        paymentStatus=raw_status,
+        verification_status=raw_verif,
+        verificationStatus=raw_verif,
+        display_name_public=raw_name_pub,
+        displayNamePublic=raw_name_pub,
+        display_amount_public=raw_amt_pub,
+        displayAmountPublic=raw_amt_pub,
+        admin_remarks=row.get("admin_remarks") or "",
+        adminRemarks=row.get("admin_remarks") or "",
+        verified_by=row.get("verified_by") or "",
+        verifiedBy=row.get("verified_by") or "",
+        verified_at=row.get("verified_at") or "",
+        verifiedAt=row.get("verified_at") or "",
+        is_published=raw_pub,
+        isPublished=raw_pub,
+        created_at=row.get("created_at") or "",
+        createdAt=row.get("created_at") or "",
+        updated_at=row.get("updated_at") or "",
+        updatedAt=row.get("updated_at") or "",
+    )
+
+
+def _format_public_donor(row: dict) -> PublicDonorRecord:
+    """Sanitize donor record: only approved & published donors with public name consent."""
+    raw_amount = float(row.get("donation_amount") or row.get("amount") or 0.0)
+    raw_amt_pub = bool(row.get("display_amount_public", 0))
+    raw_purpose = row.get("purpose") or row.get("project_name") or "सामान्य संवर्धन निधी"
+    raw_date = row.get("donation_date") or (row.get("created_at")[:10] if row.get("created_at") else "")
+
+    return PublicDonorRecord(
+        id=str(row["id"]),
+        donor_name=row.get("donor_name") or "अनाम देणगीदार",
+        donorName=row.get("donor_name") or "अनाम देणगीदार",
+        purpose=raw_purpose,
+        donation_date=raw_date,
+        donationDate=raw_date,
+        display_amount_public=raw_amt_pub,
+        displayAmountPublic=raw_amt_pub,
+        donation_amount=raw_amount if raw_amt_pub else None,
+        created_at=row.get("created_at") or "",
+    )
+
+
+@app.get("/api/donations/public", response_model=List[PublicDonorRecord], tags=["Donations"])
+@app.get("/api/donations/public-donors", response_model=List[PublicDonorRecord], tags=["Donations"])
+async def list_public_donors(supabase: Any = Depends(get_supabase)):
+    """
+    Public website endpoint: strictly returns ONLY donors where:
+    verification_status = 'approved' AND is_published = TRUE AND display_name_public = TRUE.
+    Private phone, email, transaction references, and admin remarks are NEVER returned.
+    """
+    res = (
+        supabase.table("donations")
+        .select("*")
+        .eq("verification_status", "approved")
+        .eq("is_published", 1)
+        .eq("display_name_public", 1)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return [_format_public_donor(r) for r in res.data]
+
+
+@app.get("/api/admin/donations", response_model=List[DonationRecord], tags=["Donations"])
+@app.get("/api/donations", response_model=List[DonationRecord], tags=["Donations"])
+async def list_admin_donations(
+    status_filter: Optional[str] = Query(None, alias="verification_status"),
+    search: Optional[str] = None,
+    limit: int = Query(200, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    supabase: Any = Depends(get_supabase)
+):
+    """
+    Admin management endpoint: returns full donation records with private verification data.
+    """
+    query = supabase.table("donations").select("*")
+    if status_filter and status_filter.lower() != "all":
+        query = query.eq("verification_status", status_filter.lower())
+    
+    res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    data = res.data
+
+    if search:
+        s = search.lower().strip()
+        data = [
+            r for r in data
+            if s in (r.get("donor_name") or "").lower()
+            or s in (r.get("purpose") or "").lower()
+            or s in (r.get("phone_private") or r.get("phone") or "").lower()
+            or s in (r.get("transaction_reference") or r.get("transaction_ref") or "").lower()
+        ]
+
+    return [_format_donation_record(r) for r in data]
+
+
+@app.get("/api/admin/donations/{donation_id}", response_model=DonationRecord, tags=["Donations"])
+async def get_donation_detail(donation_id: str, supabase: Any = Depends(get_supabase)):
+    res = supabase.table("donations").select("*").eq("id", donation_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="देणगी नोंद सापडली नाही.")
+    return _format_donation_record(res.data[0])
+
+
 @app.post("/api/donations", response_model=DonationResponse, status_code=201, tags=["Donations"])
-async def create_donation(req: DonationCreate, supabase: Any = Depends(get_supabase)):
+async def create_public_donation(req: DonationCreate, supabase: Any = Depends(get_supabase)):
+    """
+    Public donation submission:
+    Creates a record with verification_status = 'pending' and is_published = False.
+    The name is NOT displayed publicly until an Admin verifies and approves the record.
+    """
     new_id = str(uuid.uuid4())
+    today_str = date.today().isoformat()
+    now_iso = datetime.now().isoformat()
     receipt_no = f"GSP-80G-{date.today().year}-{random.randint(10000, 99999)}"
-    tx_ref = req.transactionRef or receipt_no
+    tx_ref = (req.transactionRef or "").strip() or receipt_no
+    donor_name = req.donorName.strip() or "अनाम (Anonymous)"
+    clean_phone = (req.phone or "").strip()
+    clean_email = (req.email or "").strip().lower() if req.email else ""
 
     payload = {
         "id": new_id,
-        "donor_name": req.donorName.strip() or "अनाम (Anonymous)",
-        "email": req.email.lower() if req.email else None,
-        "phone": req.phone,
+        "donor_name": donor_name,
+        "donation_amount": req.amount,
         "amount": req.amount,
+        "donation_date": today_str,
+        "purpose": req.projectName,
         "project_name": req.projectName,
         "payment_method": req.paymentMethod,
         "transaction_ref": tx_ref,
-        "pan_number": req.panNumber,
+        "transaction_reference": tx_ref,
+        "pan_number": req.panNumber or "",
+        "phone_private": clean_phone,
+        "phone": clean_phone,
+        "email_private": clean_email,
+        "email": clean_email,
+        "payment_status": "completed",
         "status": "completed",
+        "verification_status": "pending", # 🟡 Pending admin approval
+        "display_name_public": 1 if req.displayNamePublic else 0,
+        "display_amount_public": 1 if req.displayAmountPublic else 0, # OFF by default
+        "admin_remarks": "संकेतस्थळावरून थेट नोंदणी. प्रशासकीय पडताळणी प्रलंबित.",
+        "verified_by": "",
+        "verified_at": "",
+        "is_published": 0, # ⚪ Not published until approved
+        "created_at": now_iso,
+        "updated_at": now_iso,
     }
     supabase.table("donations").insert(payload).execute()
     return DonationResponse(
         id=uuid.UUID(new_id),
         receiptNumber=receipt_no,
-        message=f"धन्यवाद! ₹{req.amount:,.0f} ची देणगी यशस्वीरित्या नोंदवली गेली आहे."
+        message=f"धन्यवाद! ₹{req.amount:,.0f} ची देणगी यशस्वीरित्या नोंदवली गेली आहे. प्रशासकीय पडताळणीनंतर देणगीदारांच्या यादीत आपले नाव समाविष्ट केले जाईल."
     )
 
 
-@app.get("/api/donations", response_model=List[DonationRecord], tags=["Donations"])
-async def list_donations(limit: int = Query(100, ge=1, le=500), supabase: Any = Depends(get_supabase)):
-    res = supabase.table("donations").select("*").order("created_at", desc=True).limit(limit).execute()
-    return [
-        DonationRecord(
-            id=row["id"],
-            donor_name=row["donor_name"],
-            email=row.get("email"),
-            phone=row.get("phone"),
-            amount=float(row["amount"]),
-            project_name=row["project_name"],
-            payment_method=row["payment_method"],
-            transaction_ref=row.get("transaction_ref"),
-            status=row["status"],
-            created_at=row["created_at"],
-        )
-        for row in res.data
-    ]
+@app.post("/api/admin/donations", response_model=DonationRecord, status_code=201, tags=["Donations"])
+async def create_admin_donation(req: DonationAdminCreate, supabase: Any = Depends(get_supabase)):
+    """Admin manual donation entry."""
+    new_id = str(uuid.uuid4())
+    today_str = req.donationDate or date.today().isoformat()
+    now_iso = datetime.now().isoformat()
+    receipt_no = f"GSP-80G-{date.today().year}-{random.randint(10000, 99999)}"
+    tx_ref = (req.transactionRef or "").strip() or receipt_no
+    clean_phone = (req.phonePrivate or "").strip()
+    clean_email = (str(req.emailPrivate) if req.emailPrivate else "").strip().lower()
+
+    payload = {
+        "id": new_id,
+        "donor_name": req.donorName.strip(),
+        "donation_amount": req.amount,
+        "amount": req.amount,
+        "donation_date": today_str,
+        "purpose": req.purpose,
+        "project_name": req.purpose,
+        "payment_method": req.paymentMethod,
+        "transaction_ref": tx_ref,
+        "transaction_reference": tx_ref,
+        "pan_number": "",
+        "phone_private": clean_phone,
+        "phone": clean_phone,
+        "email_private": clean_email,
+        "email": clean_email,
+        "payment_status": req.paymentStatus,
+        "status": req.paymentStatus,
+        "verification_status": req.verificationStatus,
+        "display_name_public": 1 if req.displayNamePublic else 0,
+        "display_amount_public": 1 if req.displayAmountPublic else 0,
+        "admin_remarks": req.adminRemarks or "प्रशासकाद्वारे थेट नोंद.",
+        "verified_by": "Admin",
+        "verified_at": now_iso if req.verificationStatus == "approved" else "",
+        "is_published": 1 if req.isPublished else 0,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+    supabase.table("donations").insert(payload).execute()
+    return _format_donation_record(payload)
 
 
+@app.put("/api/admin/donations/{donation_id}", response_model=DonationRecord, tags=["Donations"])
+@app.patch("/api/admin/donations/{donation_id}", response_model=DonationRecord, tags=["Donations"])
+async def update_admin_donation(
+    donation_id: str,
+    req: DonationAdminUpdate,
+    supabase: Any = Depends(get_supabase)
+):
+    """
+    Admin verification & approval endpoint:
+    Approve, Reject, Hide/Unpublish, Edit donor name, Add admin remarks, and Toggle privacy settings.
+    """
+    existing = supabase.table("donations").select("*").eq("id", donation_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="देणगी नोंद सापडली नाही.")
+
+    now_iso = datetime.now().isoformat()
+    update_dict: Dict[str, Any] = {"updated_at": now_iso}
+
+    if req.donorName is not None:
+        update_dict["donor_name"] = req.donorName.strip()
+    if req.amount is not None:
+        update_dict["donation_amount"] = req.amount
+        update_dict["amount"] = req.amount
+    if req.donationDate is not None:
+        update_dict["donation_date"] = req.donationDate
+    if req.purpose is not None:
+        update_dict["purpose"] = req.purpose
+        update_dict["project_name"] = req.purpose
+    if req.paymentMethod is not None:
+        update_dict["payment_method"] = req.paymentMethod
+    if req.transactionRef is not None:
+        update_dict["transaction_ref"] = req.transactionRef
+        update_dict["transaction_reference"] = req.transactionRef
+    if req.phonePrivate is not None:
+        update_dict["phone_private"] = req.phonePrivate
+        update_dict["phone"] = req.phonePrivate
+    if req.emailPrivate is not None:
+        update_dict["email_private"] = str(req.emailPrivate).lower()
+        update_dict["email"] = str(req.emailPrivate).lower()
+    if req.paymentStatus is not None:
+        update_dict["payment_status"] = req.paymentStatus
+        update_dict["status"] = req.paymentStatus
+    if req.verificationStatus is not None:
+        update_dict["verification_status"] = req.verificationStatus
+        if req.verificationStatus == "approved":
+            update_dict["verified_at"] = now_iso
+            update_dict["verified_by"] = req.verifiedBy or "Admin"
+    if req.displayNamePublic is not None:
+        update_dict["display_name_public"] = 1 if req.displayNamePublic else 0
+    if req.displayAmountPublic is not None:
+        update_dict["display_amount_public"] = 1 if req.displayAmountPublic else 0
+    if req.adminRemarks is not None:
+        update_dict["admin_remarks"] = req.adminRemarks
+    if req.verifiedBy is not None:
+        update_dict["verified_by"] = req.verifiedBy
+    if req.isPublished is not None:
+        update_dict["is_published"] = 1 if req.isPublished else 0
+
+    supabase.table("donations").update(update_dict).eq("id", donation_id).execute()
+    updated = supabase.table("donations").select("*").eq("id", donation_id).execute()
+    return _format_donation_record(updated.data[0])
+
+
+@app.delete("/api/admin/donations/{donation_id}", tags=["Donations"])
 @app.delete("/api/donations/{donation_id}", tags=["Donations"])
 async def delete_donation(donation_id: str, supabase: Any = Depends(get_supabase)):
     supabase.table("donations").delete().eq("id", donation_id).execute()
@@ -803,6 +1130,7 @@ async def get_admin_stats(supabase: Any = Depends(get_supabase)):
     partners = supabase.table("partner_orgs").select("id").execute().data
     edu_progs = supabase.table("education_programs").select("id").execute().data
     cert_tmpl = supabase.table("certificate_templates").select("id").execute().data
+    manogats = supabase.table("member_manogat").select("id").execute().data
 
     total_don_amount = sum(float(d.get("amount") or 0) for d in dons)
     unread_msgs = sum(1 for m in msgs if m.get("status") == "unread")
@@ -824,21 +1152,8 @@ async def get_admin_stats(supabase: Any = Depends(get_supabase)):
         totalPartnerOrgsCount=len(partners),
         totalEducationProgramsCount=len(edu_progs),
         totalCertificateTemplatesCount=len(cert_tmpl),
-        recentDonations=[
-            DonationRecord(
-                id=r["id"],
-                donor_name=r["donor_name"],
-                email=r.get("email"),
-                phone=r.get("phone"),
-                amount=float(r["amount"]),
-                project_name=r["project_name"],
-                payment_method=r["payment_method"],
-                transaction_ref=r.get("transaction_ref"),
-                status=r["status"],
-                created_at=r["created_at"],
-            )
-            for r in dons[:25]
-        ],
+        totalManogatCount=len(manogats),
+        recentDonations=[_format_donation_record(r) for r in dons[:30]],
         recentVolunteers=[
             VolunteerRecord(
                 id=r["id"],
@@ -1268,6 +1583,18 @@ async def list_dinvishesh(
     target_status = (verification_status.strip() if isinstance(verification_status, str) else "")
 
     records = []
+    # Pre-fetch all event sources if possible to avoid N+1 query slowdown
+    event_sources_map: Dict[str, List[Dict[str, Any]]] = {}
+    try:
+        all_src_res = supabase.table("event_sources").select("*").execute()
+        if all_src_res.data:
+            for s in all_src_res.data:
+                did = s.get("dinvishesh_id")
+                if did:
+                    event_sources_map.setdefault(did, []).append(s)
+    except Exception:
+        pass
+
     for r in res.data:
         # Check personality filter
         r_pers = r.get("personality") or r.get("figure") or "छत्रपती शिवाजी महाराज"
@@ -1317,15 +1644,7 @@ async def list_dinvishesh(
         desc_mr = r.get("description_marathi") or r.get("description") or ""
         desc_en = r.get("description_english") or r.get("description_en") or ""
         img = r.get("image_url") or r.get("image") or ""
-
-        # Fetch extra event_sources if table exists
-        event_srcs: List[Dict[str, Any]] = []
-        try:
-            src_res = supabase.table("event_sources").select("*").eq("dinvishesh_id", r["id"]).execute()
-            if src_res.data:
-                event_srcs = src_res.data
-        except Exception:
-            event_srcs = []
+        event_srcs = event_sources_map.get(r["id"], [])
 
         records.append(
             DinvisheshRecord(
@@ -1639,6 +1958,140 @@ async def delete_dinvishesh(event_id: str, supabase: Any = Depends(get_supabase)
         pass
     supabase.table("dinvishesh").delete().eq("id", event_id).execute()
     return {"deleted": event_id}
+
+
+# ============================================================================
+# 21. Member Manogat (मनोगत) CRUD API
+# ============================================================================
+def _format_manogat_record(r: dict) -> ManogatRecord:
+    return ManogatRecord(
+        id=r["id"],
+        name=r["name"],
+        nameEn=r.get("name_en") or "",
+        name_en=r.get("name_en") or "",
+        designation=r.get("designation") or "",
+        designationEn=r.get("designation_en") or "",
+        designation_en=r.get("designation_en") or "",
+        photo=r.get("photo") or "",
+        shortManogat=r.get("short_manogat") or "",
+        short_manogat=r.get("short_manogat") or "",
+        shortManogatEn=r.get("short_manogat_en") or "",
+        short_manogat_en=r.get("short_manogat_en") or "",
+        detailedManogat=r.get("detailed_manogat") or "",
+        detailed_manogat=r.get("detailed_manogat") or "",
+        detailedManogatEn=r.get("detailed_manogat_en") or "",
+        detailed_manogat_en=r.get("detailed_manogat_en") or "",
+        displayOrder=int(r.get("display_order") or 0),
+        display_order=int(r.get("display_order") or 0),
+        isPublished=bool(r.get("is_published", 1)),
+        is_published=bool(r.get("is_published", 1)),
+        createdAt=r.get("created_at") or "",
+        created_at=r.get("created_at") or "",
+        updatedAt=r.get("updated_at") or "",
+        updated_at=r.get("updated_at") or "",
+    )
+
+
+@app.get("/api/manogat", response_model=List[ManogatRecord], tags=["Manogat"])
+async def list_published_manogats(supabase: Any = Depends(get_supabase)):
+    """Public list of published member reflections ordered by display order."""
+    res = (
+        supabase.table("member_manogat")
+        .select("*")
+        .eq("is_published", 1)
+        .order("display_order", desc=False)
+        .execute()
+    )
+    return [_format_manogat_record(r) for r in res.data]
+
+
+@app.get("/api/admin/manogat", response_model=List[ManogatRecord], tags=["Manogat"])
+async def list_all_manogats_admin(supabase: Any = Depends(get_supabase)):
+    """Admin list of all member reflections including drafts and unpublished ones."""
+    res = (
+        supabase.table("member_manogat")
+        .select("*")
+        .order("display_order", desc=False)
+        .execute()
+    )
+    return [_format_manogat_record(r) for r in res.data]
+
+
+@app.get("/api/manogat/{manogat_id}", response_model=ManogatRecord, tags=["Manogat"])
+async def get_manogat(manogat_id: str, supabase: Any = Depends(get_supabase)):
+    res = supabase.table("member_manogat").select("*").eq("id", manogat_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="मनोगत सापडले नाही")
+    return _format_manogat_record(res.data[0])
+
+
+@app.post("/api/manogat", response_model=ManogatRecord, status_code=201, tags=["Manogat"])
+async def create_manogat(req: ManogatCreate, supabase: Any = Depends(get_supabase)):
+    new_id = str(uuid.uuid4())
+    now_iso = datetime.now().isoformat()
+    payload = {
+        "id": new_id,
+        "name": req.name,
+        "name_en": req.nameEn,
+        "designation": req.designation,
+        "designation_en": req.designationEn,
+        "photo": req.photo,
+        "short_manogat": req.shortManogat,
+        "short_manogat_en": req.shortManogatEn,
+        "detailed_manogat": req.detailedManogat,
+        "detailed_manogat_en": req.detailedManogatEn,
+        "display_order": req.displayOrder,
+        "is_published": 1 if req.isPublished else 0,
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+    supabase.table("member_manogat").insert(payload).execute()
+    return _format_manogat_record(payload)
+
+
+@app.put("/api/manogat/{manogat_id}", response_model=ManogatRecord, tags=["Manogat"])
+@app.patch("/api/manogat/{manogat_id}", response_model=ManogatRecord, tags=["Manogat"])
+async def update_manogat(
+    manogat_id: str, req: ManogatUpdate, supabase: Any = Depends(get_supabase)
+):
+    now_iso = datetime.now().isoformat()
+    existing = supabase.table("member_manogat").select("*").eq("id", manogat_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="मनोगत सापडले नाही")
+
+    update_dict: Dict[str, Any] = {"updated_at": now_iso}
+    if req.name is not None:
+        update_dict["name"] = req.name
+    if req.nameEn is not None:
+        update_dict["name_en"] = req.nameEn
+    if req.designation is not None:
+        update_dict["designation"] = req.designation
+    if req.designationEn is not None:
+        update_dict["designation_en"] = req.designationEn
+    if req.photo is not None:
+        update_dict["photo"] = req.photo
+    if req.shortManogat is not None:
+        update_dict["short_manogat"] = req.shortManogat
+    if req.shortManogatEn is not None:
+        update_dict["short_manogat_en"] = req.shortManogatEn
+    if req.detailedManogat is not None:
+        update_dict["detailed_manogat"] = req.detailedManogat
+    if req.detailedManogatEn is not None:
+        update_dict["detailed_manogat_en"] = req.detailedManogatEn
+    if req.displayOrder is not None:
+        update_dict["display_order"] = req.displayOrder
+    if req.isPublished is not None:
+        update_dict["is_published"] = 1 if req.isPublished else 0
+
+    supabase.table("member_manogat").update(update_dict).eq("id", manogat_id).execute()
+    updated = supabase.table("member_manogat").select("*").eq("id", manogat_id).execute()
+    return _format_manogat_record(updated.data[0])
+
+
+@app.delete("/api/manogat/{manogat_id}", tags=["Manogat"])
+async def delete_manogat(manogat_id: str, supabase: Any = Depends(get_supabase)):
+    supabase.table("member_manogat").delete().eq("id", manogat_id).execute()
+    return {"deleted": manogat_id}
 
 
 @app.post("/api/admin/seed", tags=["Admin"])
